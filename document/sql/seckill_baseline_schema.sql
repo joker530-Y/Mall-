@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `sms_seckill_order_log` (
   `member_id` bigint NOT NULL,
   `relation_id` bigint NOT NULL,
   `order_id` bigint DEFAULT NULL,
-  `status` tinyint NOT NULL DEFAULT '0' COMMENT '0 processing, 1 success',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '0 processing, 1 success, 2 failed',
   `fail_reason` varchar(255) DEFAULT NULL,
   `create_time` datetime NOT NULL,
   `update_time` datetime NOT NULL,

@@ -15,6 +15,14 @@ public interface SeckillBaselineDao {
                               @Param("orderId") Long orderId,
                               @Param("updatedAt") Date updatedAt);
 
+    int updateOrderLogFailed(@Param("memberId") Long memberId,
+                             @Param("relationId") Long relationId,
+                             @Param("reason") String reason,
+                             @Param("updatedAt") Date updatedAt);
+
+    Long getSuccessOrderId(@Param("memberId") Long memberId,
+                           @Param("relationId") Long relationId);
+
     int decreaseFlashPromotionStock(@Param("relationId") Long relationId,
                                     @Param("quantity") Integer quantity);
 

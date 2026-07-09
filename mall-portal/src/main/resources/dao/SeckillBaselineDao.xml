@@ -30,6 +30,27 @@
             AND relation_id = #{relationId}
     </update>
 
+    <update id="updateOrderLogFailed">
+        UPDATE sms_seckill_order_log
+        SET
+            status = 2,
+            fail_reason = #{reason},
+            update_time = #{updatedAt}
+        WHERE
+            member_id = #{memberId}
+            AND relation_id = #{relationId}
+    </update>
+
+    <select id="getSuccessOrderId" resultType="java.lang.Long">
+        SELECT order_id
+        FROM sms_seckill_order_log
+        WHERE
+            member_id = #{memberId}
+            AND relation_id = #{relationId}
+            AND status = 1
+        LIMIT 1
+    </select>
+
     <update id="decreaseFlashPromotionStock">
         UPDATE sms_flash_promotion_product_relation
         SET flash_promotion_count = flash_promotion_count - #{quantity}
