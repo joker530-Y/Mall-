@@ -17,6 +17,16 @@ foreach ($key in $keys) {
 Write-Output "Redis keys cleared by pattern: $redisPattern"
 
 if (Test-Path 'D:\RabbitMQ\rabbitmq-server-4.3.2\sbin\rabbitmqctl.bat') {
-    & 'D:\RabbitMQ\rabbitmq-server-4.3.2\sbin\rabbitmqctl.bat' -q purge_queue -p /mall mall.seckill.order | Out-Null
-    Write-Output "RabbitMQ queue purged: mall.seckill.order"
+    $rabbitProcess = Start-Process `
+        -FilePath 'D:\RabbitMQ\rabbitmq-server-4.3.2\sbin\rabbitmqctl.bat' `
+        -ArgumentList @('-q', 'purge_queue', '-p', '/mall', 'mall.seckill.order') `
+        -WindowStyle Hidden `
+        -PassThru
+
+    if ($rabbitProcess.WaitForExit(15000)) {
+        Write-Output "RabbitMQ queue purged: mall.seckill.order"
+    } else {
+        Stop-Process -Id $rabbitProcess.Id -Force
+        Write-Warning "RabbitMQ queue purge timed out; continuing after database and Redis reset"
+    }
 }

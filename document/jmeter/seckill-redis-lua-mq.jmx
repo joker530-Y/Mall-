@@ -74,6 +74,18 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="seckill member csv">
+          <stringProp name="filename">${__P(csvFile,document/jmeter/seckill-members.csv)}</stringProp>
+          <stringProp name="fileEncoding">UTF-8</stringProp>
+          <stringProp name="variableNames">username,password</stringProp>
+          <boolProp name="ignoreFirstLine">true</boolProp>
+          <stringProp name="delimiter">,</stringProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">false</boolProp>
+          <boolProp name="stopThread">true</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+        </CSVDataSet>
+        <hashTree/>
         <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="JSON headers">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="Content-Type" elementType="Header">
@@ -87,7 +99,7 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="Login once per thread"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Login per iteration"/>
         <hashTree>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="member login">
             <stringProp name="HTTPSampler.domain">${host}</stringProp>
@@ -124,7 +136,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;relationId&quot;:${relationId},&quot;productSkuId&quot;:${productSkuId},&quot;memberReceiveAddressId&quot;:${addressId},&quot;quantity&quot;:1,&quot;payType&quot;:0}</stringProp>
+                <stringProp name="Argument.value">{&quot;relationId&quot;:${relationId},&quot;productSkuId&quot;:${productSkuId},&quot;memberReceiveAddressId&quot;:null,&quot;quantity&quot;:1,&quot;payType&quot;:0}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>

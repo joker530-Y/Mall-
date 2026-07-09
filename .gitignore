@@ -9,3 +9,7 @@ target/
 .settings/
 .classpath
 .project
+
+# JMeter generated artifacts #
+jmeter.log
+document/jmeter/seckill-members.csv
