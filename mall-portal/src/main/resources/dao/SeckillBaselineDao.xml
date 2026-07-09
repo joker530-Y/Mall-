@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.macro.mall.portal.dao.SeckillBaselineDao">
+    <insert id="insertOrderLog">
+        INSERT INTO sms_seckill_order_log (
+            request_id,
+            member_id,
+            relation_id,
+            status,
+            create_time,
+            update_time
+        ) VALUES (
+            #{requestId},
+            #{memberId},
+            #{relationId},
+            0,
+            #{createdAt},
+            #{createdAt}
+        )
+    </insert>
+
+    <update id="updateOrderLogSuccess">
+        UPDATE sms_seckill_order_log
+        SET
+            order_id = #{orderId},
+            status = 1,
+            update_time = #{updatedAt}
+        WHERE
+            member_id = #{memberId}
+            AND relation_id = #{relationId}
+    </update>
+
+    <update id="decreaseFlashPromotionStock">
+        UPDATE sms_flash_promotion_product_relation
+        SET flash_promotion_count = flash_promotion_count - #{quantity}
+        WHERE
+            id = #{relationId}
+            AND flash_promotion_count >= #{quantity}
+    </update>
+
+    <select id="getRemainingStock" resultType="java.lang.Integer">
+        SELECT flash_promotion_count
+        FROM sms_flash_promotion_product_relation
+        WHERE id = #{relationId}
+    </select>
+</mapper>
