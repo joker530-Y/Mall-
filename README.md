@@ -212,3 +212,23 @@ mall
 [Apache License 2.0](https://github.com/macrozheng/mall/blob/master/LICENSE)
 
 Copyright (c) 2018-2026 macrozheng
+
+## Optimization Delivery Pack
+
+This fork includes a focused engineering delivery pack for the mall seckill and performance optimization work:
+
+- Delivery entry: `document/delivery/phase5-delivery.md`
+- Local runbook: `document/delivery/local-runbook.md`
+- API notes: `document/api/optimization-api.md`
+- Architecture diagrams: `document/architecture/optimization-architecture.md`
+- Demo script: `document/delivery/demo-script.md`
+- Review notes: `document/delivery/review-notes.md`
+- Seckill comparison report: `document/performance/seckill-phase1c-report.md`
+- Phase 2 benchmark report template: `document/performance/phase2-performance-report.md`
+
+Quick verification:
+
+```powershell
+mvn -pl mall-portal -am compile -DskipTests
+powershell -ExecutionPolicy Bypass -File document/scripts/verify_phase5_delivery.ps1
+```
