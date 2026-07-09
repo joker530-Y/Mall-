@@ -71,6 +71,17 @@ mongo:
     sqlEnable: true # 用于控制是否通过数据库数据来插入mongo
 
 # 消息队列定义
+mall:
+  ai:
+    enabled: true
+    provider: mock
+    api-key: ${AI_API_KEY:}
+    base-url:
+    model:
+    timeout-millis: 5000
+    max-context-count: 6
+    max-tokens: 800
+
 rabbitmq:
   queue:
     name:

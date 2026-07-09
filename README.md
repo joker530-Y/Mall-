@@ -225,6 +225,7 @@ This fork includes a focused engineering delivery pack for the mall seckill and 
 - Review notes: `document/delivery/review-notes.md`
 - Seckill comparison report: `document/performance/seckill-phase1c-report.md`
 - Phase 2 benchmark report template: `document/performance/phase2-performance-report.md`
+- Phase 4 AI customer service RAG: `document/ai-phase4-rag.md`
 
 Quick verification:
 

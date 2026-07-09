@@ -136,3 +136,44 @@ Optimization:
 - Keeps DB paging semantics.
 - Queries order items once for the current page.
 - Groups items by `orderId` instead of repeatedly scanning the full item list for every order.
+
+## AI Customer Service RAG
+
+### Provider Status
+
+```http
+GET /ai/customer/status
+Authorization: Bearer <member-jwt>
+```
+
+Purpose:
+
+- Shows whether AI customer service is enabled.
+- Shows selected provider, model, base URL, and API-key readiness.
+
+### Customer Chat
+
+```http
+POST /ai/customer/chat
+Authorization: Bearer <member-jwt>
+Content-Type: application/json
+
+{
+  "question": "这个订单什么时候发货？",
+  "orderSn": "202607090001",
+  "productId": 26,
+  "maxContextCount": 6
+}
+```
+
+Purpose:
+
+- Retrieves product, current-member order, FAQ, and after-sales policy snippets.
+- Sends the assembled context to the configured provider.
+- Returns both `answer` and `contexts` so the demo can prove which knowledge was used.
+
+Providers:
+
+- `mock`: local demo without external model.
+- `openai`, `qwen`, `deepseek`: OpenAI-compatible chat completion calls with `AI_API_KEY`.
+- `ollama`: local model call through `http://localhost:11434/api/chat`.
