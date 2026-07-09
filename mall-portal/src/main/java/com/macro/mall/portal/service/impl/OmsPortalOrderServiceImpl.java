@@ -379,12 +379,15 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         List<Long> orderIds = orderList.stream().map(OmsOrder::getId).collect(Collectors.toList());
         OmsOrderItemExample orderItemExample = new OmsOrderItemExample();
         orderItemExample.createCriteria().andOrderIdIn(orderIds);
+        orderItemExample.setOrderByClause("order_id asc, id asc");
         List<OmsOrderItem> orderItemList = orderItemMapper.selectByExample(orderItemExample);
+        Map<Long, List<OmsOrderItem>> orderItemMap = orderItemList.stream()
+                .collect(Collectors.groupingBy(OmsOrderItem::getOrderId));
         List<OmsOrderDetail> orderDetailList = new ArrayList<>();
         for (OmsOrder omsOrder : orderList) {
             OmsOrderDetail orderDetail = new OmsOrderDetail();
             BeanUtil.copyProperties(omsOrder,orderDetail);
-            List<OmsOrderItem> relatedItemList = orderItemList.stream().filter(item -> item.getOrderId().equals(orderDetail.getId())).collect(Collectors.toList());
+            List<OmsOrderItem> relatedItemList = orderItemMap.getOrDefault(orderDetail.getId(), Collections.emptyList());
             orderDetail.setOrderItemList(relatedItemList);
             orderDetailList.add(orderDetail);
         }

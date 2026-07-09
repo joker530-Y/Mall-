@@ -63,6 +63,8 @@ redis:
   expire:
     authCode: 90 # 验证码超期时间
     common: 86400 # 24小时
+    hot-data: 300 # 首页、推荐、商品详情等热点数据缓存基础TTL
+    hot-data-random-bound: 120 # 热点缓存TTL随机抖动范围，降低同批过期
 
 mongo:
   insert:
@@ -73,4 +75,3 @@ rabbitmq:
   queue:
     name:
       cancelOrder: cancelOrderQueue
-

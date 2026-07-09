@@ -41,6 +41,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
+        <!-- Caffeine local hot data cache for phase 2 performance optimization -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
         <!--支付宝支付Java SDK-->
         <dependency>
             <groupId>com.alipay.sdk</groupId>

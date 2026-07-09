@@ -3,8 +3,30 @@ package com.macro.mall.portal.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.pagehelper.PageHelper;
-import com.macro.mall.mapper.*;
-import com.macro.mall.model.*;
+import com.macro.mall.mapper.PmsBrandMapper;
+import com.macro.mall.mapper.PmsProductAttributeMapper;
+import com.macro.mall.mapper.PmsProductAttributeValueMapper;
+import com.macro.mall.mapper.PmsProductCategoryMapper;
+import com.macro.mall.mapper.PmsProductFullReductionMapper;
+import com.macro.mall.mapper.PmsProductLadderMapper;
+import com.macro.mall.mapper.PmsProductMapper;
+import com.macro.mall.mapper.PmsSkuStockMapper;
+import com.macro.mall.model.PmsBrand;
+import com.macro.mall.model.PmsProduct;
+import com.macro.mall.model.PmsProductAttribute;
+import com.macro.mall.model.PmsProductAttributeExample;
+import com.macro.mall.model.PmsProductAttributeValue;
+import com.macro.mall.model.PmsProductAttributeValueExample;
+import com.macro.mall.model.PmsProductCategory;
+import com.macro.mall.model.PmsProductCategoryExample;
+import com.macro.mall.model.PmsProductExample;
+import com.macro.mall.model.PmsProductFullReduction;
+import com.macro.mall.model.PmsProductFullReductionExample;
+import com.macro.mall.model.PmsProductLadder;
+import com.macro.mall.model.PmsProductLadderExample;
+import com.macro.mall.model.PmsSkuStock;
+import com.macro.mall.model.PmsSkuStockExample;
+import com.macro.mall.portal.component.HotDataCache;
 import com.macro.mall.portal.dao.PortalProductDao;
 import com.macro.mall.portal.domain.PmsPortalProductDetail;
 import com.macro.mall.portal.domain.PmsProductCategoryNode;
@@ -16,39 +38,31 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 前台订单管理Service实现类
- * Created by macro on 2020/4/6.
- */
 @Service
 public class PmsPortalProductServiceImpl implements PmsPortalProductService {
-    /** 商品Mapper */
+    private static final String PRODUCT_DETAIL_CACHE_KEY = "product:detail:";
+    private static final String PRODUCT_CATEGORY_TREE_CACHE_KEY = "product:category-tree";
+
     @Autowired
     private PmsProductMapper productMapper;
-    /** 商品分类Mapper */
     @Autowired
     private PmsProductCategoryMapper productCategoryMapper;
-    /** 品牌Mapper */
     @Autowired
     private PmsBrandMapper brandMapper;
-    /** 商品属性Mapper */
     @Autowired
     private PmsProductAttributeMapper productAttributeMapper;
-    /** 商品属性值Mapper */
     @Autowired
     private PmsProductAttributeValueMapper productAttributeValueMapper;
-    /** SKU库存Mapper */
     @Autowired
     private PmsSkuStockMapper skuStockMapper;
-    /** 阶梯价格Mapper */
     @Autowired
     private PmsProductLadderMapper productLadderMapper;
-    /** 满减Mapper */
     @Autowired
     private PmsProductFullReductionMapper productFullReductionMapper;
-    /** 前台商品Dao */
     @Autowired
     private PortalProductDao portalProductDao;
+    @Autowired
+    private HotDataCache hotDataCache;
 
     @Override
     public List<PmsProduct> search(String keyword, Long brandId, Long productCategoryId, Integer pageNum, Integer pageSize, Integer sort) {
@@ -66,7 +80,6 @@ public class PmsPortalProductServiceImpl implements PmsPortalProductService {
         if (productCategoryId != null) {
             criteria.andProductCategoryIdEqualTo(productCategoryId);
         }
-        //1->按新品；2->按销量；3->价格从低到高；4->价格从高到低
         if (sort == 1) {
             example.setOrderByClause("id desc");
         } else if (sort == 2) {
@@ -81,31 +94,39 @@ public class PmsPortalProductServiceImpl implements PmsPortalProductService {
 
     @Override
     public List<PmsProductCategoryNode> categoryTreeList() {
+        return cacheCategoryTree(PRODUCT_CATEGORY_TREE_CACHE_KEY, this::loadCategoryTreeList);
+    }
+
+    private List<PmsProductCategoryNode> loadCategoryTreeList() {
         PmsProductCategoryExample example = new PmsProductCategoryExample();
         List<PmsProductCategory> allList = productCategoryMapper.selectByExample(example);
-        List<PmsProductCategoryNode> result = allList.stream()
+        return allList.stream()
                 .filter(item -> item.getParentId().equals(0L))
                 .map(item -> covert(item, allList))
                 .collect(Collectors.toList());
-        return result;
     }
 
     @Override
     public PmsPortalProductDetail detail(Long id) {
+        return hotDataCache.get(PRODUCT_DETAIL_CACHE_KEY + id, PmsPortalProductDetail.class, () -> loadDetail(id));
+    }
+
+    private PmsPortalProductDetail loadDetail(Long id) {
         PmsPortalProductDetail result = new PmsPortalProductDetail();
-        //获取商品信息
         PmsProduct product = productMapper.selectByPrimaryKey(id);
+        if (product == null) {
+            return null;
+        }
         result.setProduct(product);
-        //获取品牌信息
         PmsBrand brand = brandMapper.selectByPrimaryKey(product.getBrandId());
         result.setBrand(brand);
-        //获取商品属性信息
+
         PmsProductAttributeExample attributeExample = new PmsProductAttributeExample();
         attributeExample.createCriteria().andProductAttributeCategoryIdEqualTo(product.getProductAttributeCategoryId());
         List<PmsProductAttribute> productAttributeList = productAttributeMapper.selectByExample(attributeExample);
         result.setProductAttributeList(productAttributeList);
-        //获取商品属性值信息
-        if(CollUtil.isNotEmpty(productAttributeList)){
+
+        if (CollUtil.isNotEmpty(productAttributeList)) {
             List<Long> attributeIds = productAttributeList.stream().map(PmsProductAttribute::getId).collect(Collectors.toList());
             PmsProductAttributeValueExample attributeValueExample = new PmsProductAttributeValueExample();
             attributeValueExample.createCriteria().andProductIdEqualTo(product.getId())
@@ -113,34 +134,33 @@ public class PmsPortalProductServiceImpl implements PmsPortalProductService {
             List<PmsProductAttributeValue> productAttributeValueList = productAttributeValueMapper.selectByExample(attributeValueExample);
             result.setProductAttributeValueList(productAttributeValueList);
         }
-        //获取商品SKU库存信息
+
         PmsSkuStockExample skuExample = new PmsSkuStockExample();
         skuExample.createCriteria().andProductIdEqualTo(product.getId());
         List<PmsSkuStock> skuStockList = skuStockMapper.selectByExample(skuExample);
         result.setSkuStockList(skuStockList);
-        //商品阶梯价格设置
-        if(product.getPromotionType()==3){
+
+        if (product.getPromotionType() == 3) {
             PmsProductLadderExample ladderExample = new PmsProductLadderExample();
             ladderExample.createCriteria().andProductIdEqualTo(product.getId());
             List<PmsProductLadder> productLadderList = productLadderMapper.selectByExample(ladderExample);
             result.setProductLadderList(productLadderList);
         }
-        //商品满减价格设置
-        if(product.getPromotionType()==4){
+        if (product.getPromotionType() == 4) {
             PmsProductFullReductionExample fullReductionExample = new PmsProductFullReductionExample();
             fullReductionExample.createCriteria().andProductIdEqualTo(product.getId());
             List<PmsProductFullReduction> productFullReductionList = productFullReductionMapper.selectByExample(fullReductionExample);
             result.setProductFullReductionList(productFullReductionList);
         }
-        //商品可用优惠券
-        result.setCouponList(portalProductDao.getAvailableCouponList(product.getId(),product.getProductCategoryId()));
+        result.setCouponList(portalProductDao.getAvailableCouponList(product.getId(), product.getProductCategoryId()));
         return result;
     }
 
+    @SuppressWarnings("unchecked")
+    private List<PmsProductCategoryNode> cacheCategoryTree(String cacheKey, java.util.function.Supplier<List<PmsProductCategoryNode>> loader) {
+        return (List<PmsProductCategoryNode>) hotDataCache.get(cacheKey, List.class, loader::get);
+    }
 
-    /**
-     * 初始对象转化为节点对象
-     */
     private PmsProductCategoryNode covert(PmsProductCategory item, List<PmsProductCategory> allList) {
         PmsProductCategoryNode node = new PmsProductCategoryNode();
         BeanUtils.copyProperties(item, node);

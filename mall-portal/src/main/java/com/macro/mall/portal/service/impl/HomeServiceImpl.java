@@ -1,8 +1,25 @@
 package com.macro.mall.portal.service.impl;
 
 import com.github.pagehelper.PageHelper;
-import com.macro.mall.mapper.*;
-import com.macro.mall.model.*;
+import com.macro.mall.mapper.CmsSubjectMapper;
+import com.macro.mall.mapper.PmsProductCategoryMapper;
+import com.macro.mall.mapper.PmsProductMapper;
+import com.macro.mall.mapper.SmsFlashPromotionMapper;
+import com.macro.mall.mapper.SmsFlashPromotionSessionMapper;
+import com.macro.mall.mapper.SmsHomeAdvertiseMapper;
+import com.macro.mall.model.CmsSubject;
+import com.macro.mall.model.CmsSubjectExample;
+import com.macro.mall.model.PmsProduct;
+import com.macro.mall.model.PmsProductCategory;
+import com.macro.mall.model.PmsProductCategoryExample;
+import com.macro.mall.model.PmsProductExample;
+import com.macro.mall.model.SmsFlashPromotion;
+import com.macro.mall.model.SmsFlashPromotionExample;
+import com.macro.mall.model.SmsFlashPromotionSession;
+import com.macro.mall.model.SmsFlashPromotionSessionExample;
+import com.macro.mall.model.SmsHomeAdvertise;
+import com.macro.mall.model.SmsHomeAdvertiseExample;
+import com.macro.mall.portal.component.HotDataCache;
 import com.macro.mall.portal.dao.HomeDao;
 import com.macro.mall.portal.domain.FlashPromotionProduct;
 import com.macro.mall.portal.domain.HomeContentResult;
@@ -15,61 +32,57 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.function.Supplier;
 
-/**
- * 首页内容管理Service实现类
- * Created by macro on 2019/1/28.
- */
 @Service
 public class HomeServiceImpl implements HomeService {
-    /** 首页广告Mapper */
+    private static final String HOME_CONTENT_CACHE_KEY = "home:content:";
+    private static final String HOME_RECOMMEND_CACHE_KEY = "home:recommend:";
+    private static final String HOME_HOT_CACHE_KEY = "home:hot:";
+    private static final String HOME_NEW_CACHE_KEY = "home:new:";
+
     @Autowired
     private SmsHomeAdvertiseMapper advertiseMapper;
-    /** 首页Dao */
     @Autowired
     private HomeDao homeDao;
-    /** 秒杀Mapper */
     @Autowired
     private SmsFlashPromotionMapper flashPromotionMapper;
-    /** 秒杀场次Mapper */
     @Autowired
     private SmsFlashPromotionSessionMapper promotionSessionMapper;
-    /** 商品Mapper */
     @Autowired
     private PmsProductMapper productMapper;
-    /** 商品分类Mapper */
     @Autowired
     private PmsProductCategoryMapper productCategoryMapper;
-    /** 专题Mapper */
     @Autowired
     private CmsSubjectMapper subjectMapper;
+    @Autowired
+    private HotDataCache hotDataCache;
 
-    /**
-     * 获取首页内容（广告、推荐品牌、秒杀、新品、人气推荐、推荐专题）
-     * @return 首页内容结果
-     */
     @Override
     public HomeContentResult content() {
+        long minuteBucket = System.currentTimeMillis() / 60_000;
+        return hotDataCache.get(HOME_CONTENT_CACHE_KEY + minuteBucket, HomeContentResult.class, this::loadContent);
+    }
+
+    private HomeContentResult loadContent() {
         HomeContentResult result = new HomeContentResult();
-        //获取首页广告
         result.setAdvertiseList(getHomeAdvertiseList());
-        //获取推荐品牌
-        result.setBrandList(homeDao.getRecommendBrandList(0,6));
-        //获取秒杀信息
+        result.setBrandList(homeDao.getRecommendBrandList(0, 6));
         result.setHomeFlashPromotion(getHomeFlashPromotion());
-        //获取新品推荐
-        result.setNewProductList(homeDao.getNewProductList(0,4));
-        //获取人气推荐
-        result.setHotProductList(homeDao.getHotProductList(0,4));
-        //获取推荐专题
-        result.setSubjectList(homeDao.getRecommendSubjectList(0,4));
+        result.setNewProductList(homeDao.getNewProductList(0, 4));
+        result.setHotProductList(homeDao.getHotProductList(0, 4));
+        result.setSubjectList(homeDao.getRecommendSubjectList(0, 4));
         return result;
     }
 
     @Override
     public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum) {
-        // TODO: 2019/1/29 暂时默认推荐所有商品
-        PageHelper.startPage(pageNum,pageSize);
+        String cacheKey = HOME_RECOMMEND_CACHE_KEY + pageNum + ":" + pageSize;
+        return cacheProductList(cacheKey, () -> loadRecommendProductList(pageSize, pageNum));
+    }
+
+    private List<PmsProduct> loadRecommendProductList(Integer pageSize, Integer pageNum) {
+        PageHelper.startPage(pageNum, pageSize);
         PmsProductExample example = new PmsProductExample();
         example.createCriteria()
                 .andDeleteStatusEqualTo(0)
@@ -89,11 +102,11 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public List<CmsSubject> getSubjectList(Long cateId, Integer pageSize, Integer pageNum) {
-        PageHelper.startPage(pageNum,pageSize);
+        PageHelper.startPage(pageNum, pageSize);
         CmsSubjectExample example = new CmsSubjectExample();
         CmsSubjectExample.Criteria criteria = example.createCriteria();
         criteria.andShowStatusEqualTo(1);
-        if(cateId!=null){
+        if (cateId != null) {
             criteria.andCategoryIdEqualTo(cateId);
         }
         return subjectMapper.selectByExample(example);
@@ -101,42 +114,49 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public List<PmsProduct> hotProductList(Integer pageNum, Integer pageSize) {
+        String cacheKey = HOME_HOT_CACHE_KEY + pageNum + ":" + pageSize;
+        return cacheProductList(cacheKey, () -> loadHotProductList(pageNum, pageSize));
+    }
+
+    private List<PmsProduct> loadHotProductList(Integer pageNum, Integer pageSize) {
         int offset = pageSize * (pageNum - 1);
         return homeDao.getHotProductList(offset, pageSize);
     }
 
     @Override
     public List<PmsProduct> newProductList(Integer pageNum, Integer pageSize) {
+        String cacheKey = HOME_NEW_CACHE_KEY + pageNum + ":" + pageSize;
+        return cacheProductList(cacheKey, () -> loadNewProductList(pageNum, pageSize));
+    }
+
+    private List<PmsProduct> loadNewProductList(Integer pageNum, Integer pageSize) {
         int offset = pageSize * (pageNum - 1);
         return homeDao.getNewProductList(offset, pageSize);
     }
 
     private HomeFlashPromotion getHomeFlashPromotion() {
         HomeFlashPromotion homeFlashPromotion = new HomeFlashPromotion();
-        //获取当前秒杀活动
         Date now = new Date();
         SmsFlashPromotion flashPromotion = getFlashPromotion(now);
-        if (flashPromotion != null) {
-            //获取当前秒杀场次
-            SmsFlashPromotionSession flashPromotionSession = getFlashPromotionSession(now);
-            if (flashPromotionSession != null) {
-                homeFlashPromotion.setStartTime(flashPromotionSession.getStartTime());
-                homeFlashPromotion.setEndTime(flashPromotionSession.getEndTime());
-                //获取下一个秒杀场次
-                SmsFlashPromotionSession nextSession = getNextFlashPromotionSession(homeFlashPromotion.getStartTime());
-                if(nextSession!=null){
-                    homeFlashPromotion.setNextStartTime(nextSession.getStartTime());
-                    homeFlashPromotion.setNextEndTime(nextSession.getEndTime());
-                }
-                //获取秒杀商品
-                List<FlashPromotionProduct> flashProductList = homeDao.getFlashProductList(flashPromotion.getId(), flashPromotionSession.getId());
-                homeFlashPromotion.setProductList(flashProductList);
-            }
+        if (flashPromotion == null) {
+            return homeFlashPromotion;
         }
+        SmsFlashPromotionSession flashPromotionSession = getFlashPromotionSession(now);
+        if (flashPromotionSession == null) {
+            return homeFlashPromotion;
+        }
+        homeFlashPromotion.setStartTime(flashPromotionSession.getStartTime());
+        homeFlashPromotion.setEndTime(flashPromotionSession.getEndTime());
+        SmsFlashPromotionSession nextSession = getNextFlashPromotionSession(homeFlashPromotion.getStartTime());
+        if (nextSession != null) {
+            homeFlashPromotion.setNextStartTime(nextSession.getStartTime());
+            homeFlashPromotion.setNextEndTime(nextSession.getEndTime());
+        }
+        List<FlashPromotionProduct> flashProductList = homeDao.getFlashProductList(flashPromotion.getId(), flashPromotionSession.getId());
+        homeFlashPromotion.setProductList(flashProductList);
         return homeFlashPromotion;
     }
 
-    //获取下一个场次信息
     private SmsFlashPromotionSession getNextFlashPromotionSession(Date date) {
         SmsFlashPromotionSessionExample sessionExample = new SmsFlashPromotionSessionExample();
         sessionExample.createCriteria()
@@ -156,7 +176,6 @@ public class HomeServiceImpl implements HomeService {
         return advertiseMapper.selectByExample(example);
     }
 
-    //根据时间获取秒杀活动
     private SmsFlashPromotion getFlashPromotion(Date date) {
         Date currDate = DateUtil.getDate(date);
         SmsFlashPromotionExample example = new SmsFlashPromotionExample();
@@ -171,7 +190,6 @@ public class HomeServiceImpl implements HomeService {
         return null;
     }
 
-    //根据时间获取秒杀场次
     private SmsFlashPromotionSession getFlashPromotionSession(Date date) {
         Date currTime = DateUtil.getTime(date);
         SmsFlashPromotionSessionExample sessionExample = new SmsFlashPromotionSessionExample();
@@ -183,5 +201,10 @@ public class HomeServiceImpl implements HomeService {
             return promotionSessionList.get(0);
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<PmsProduct> cacheProductList(String cacheKey, Supplier<List<PmsProduct>> loader) {
+        return (List<PmsProduct>) hotDataCache.get(cacheKey, List.class, loader::get);
     }
 }
