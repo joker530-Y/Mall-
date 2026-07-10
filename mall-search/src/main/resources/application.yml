@@ -32,5 +32,8 @@ springdoc:
     - group: 'mall-search'
       packages-to-scan: com.macro.mall.search.controller
 
+mall:
+  search:
+    manage-token: ${MALL_SEARCH_MANAGE_TOKEN:}
 
 

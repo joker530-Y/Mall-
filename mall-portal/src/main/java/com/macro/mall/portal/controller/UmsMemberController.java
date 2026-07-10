@@ -2,7 +2,9 @@ package com.macro.mall.portal.controller;
 
 import com.macro.mall.common.api.CommonResult;
 import com.macro.mall.model.UmsMember;
+import com.macro.mall.portal.domain.MemberInfo;
 import com.macro.mall.portal.service.UmsMemberService;
+import cn.hutool.core.bean.BeanUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,12 +64,14 @@ public class UmsMemberController {
     @Operation(summary = "获取会员信息")
     @RequestMapping(value = "/info", method = RequestMethod.GET)
     @ResponseBody
-    public CommonResult info(Principal principal) {
+    public CommonResult<MemberInfo> info(Principal principal) {
         if(principal==null){
             return CommonResult.unauthorized(null);
         }
         UmsMember member = memberService.getCurrentMember();
-        return CommonResult.success(member);
+        MemberInfo info = new MemberInfo();
+        BeanUtil.copyProperties(member, info);
+        return CommonResult.success(info);
     }
 
     @Operation(summary = "获取验证码（演示模式，固定验证码）")

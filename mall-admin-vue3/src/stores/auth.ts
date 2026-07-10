@@ -40,6 +40,10 @@ export const useAuthStore = defineStore('auth', {
       this.roles = info.roles || []
       const permission = usePermissionStore()
       permission.initializeMenus(info.menus || [])
+      // 超级管理员保留秒杀写权限，普通 flash 菜单仅授予读权限
+      if (this.roles.includes('超级管理员') && !permission.permissions.includes('seckill:manage:write')) {
+        permission.permissions.push('seckill:manage:write')
+      }
       return true
     },
     hasPermission(permission: string) {

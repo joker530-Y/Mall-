@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
@@ -120,10 +122,11 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
                 return cached;
             }
             Map<String, Object> result = doGenerateOrder(orderParam, currentMember);
-            saveIdempotentResult(currentMember.getId(), requestId, result);
+            scheduleIdempotentResult(currentMember.getId(), requestId, result, processingKey);
             return result;
-        } finally {
+        } catch (RuntimeException ex) {
             stringRedisTemplate.delete(processingKey);
+            throw ex;
         }
     }
 
@@ -132,8 +135,14 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         if(orderParam.getMemberReceiveAddressId()==null){
             Asserts.fail("请选择收货地址！");
         }
+        if (CollectionUtils.isEmpty(orderParam.getCartIds())) {
+            Asserts.fail("请选择购物车商品");
+        }
         //获取购物车及优惠信息
         List<CartPromotionItem> cartPromotionItemList = cartItemService.listPromotion(currentMember.getId(), orderParam.getCartIds());
+        if (CollectionUtils.isEmpty(cartPromotionItemList)) {
+            Asserts.fail("购物车商品不存在或已失效");
+        }
         List<OmsOrderItem> orderItemList = buildOrderItemsFromCart(cartPromotionItemList);
         //判断购物车中商品是否都有库存
         if (!hasStock(cartPromotionItemList)) {
@@ -191,11 +200,11 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
             order.setCouponId(orderParam.getCouponId());
             order.setCouponAmount(calcCouponAmount(orderItemList));
         }
-        if (orderParam.getUseIntegration() == null) {
-            order.setIntegration(0);
+        if (orderParam.getUseIntegration() == null || orderParam.getUseIntegration().equals(0)) {
+            order.setUseIntegration(0);
             order.setIntegrationAmount(new BigDecimal(0));
         } else {
-            order.setIntegration(orderParam.getUseIntegration());
+            order.setUseIntegration(orderParam.getUseIntegration());
             order.setIntegrationAmount(calcIntegrationAmount(orderItemList));
         }
         order.setPayAmount(calcPayAmount(order));
@@ -213,6 +222,9 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         order.setOrderType(0);
         //收货人信息：姓名、电话、邮编、地址
         UmsMemberReceiveAddress address = memberReceiveAddressService.getItem(orderParam.getMemberReceiveAddressId());
+        if (address == null) {
+            Asserts.fail("收货地址不存在");
+        }
         order.setReceiverName(address.getName());
         order.setReceiverPhone(address.getPhoneNumber());
         order.setReceiverPostCode(address.getPostCode());
@@ -247,12 +259,13 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
             updateCouponStatus(orderParam.getCouponId(), currentMember.getId(), 1);
         }
         //如使用积分需要扣除积分
-        if (orderParam.getUseIntegration() != null) {
-            order.setUseIntegration(orderParam.getUseIntegration());
-            if(currentMember.getIntegration()==null){
-                currentMember.setIntegration(0);
+        if (orderParam.getUseIntegration() != null && orderParam.getUseIntegration() > 0) {
+            int deducted = portalOrderDao.adjustMemberIntegration(currentMember.getId(), -orderParam.getUseIntegration());
+            if (deducted == 0) {
+                Asserts.fail("积分不足，无法下单");
             }
-            memberService.updateIntegration(currentMember.getId(), currentMember.getIntegration() - orderParam.getUseIntegration());
+            int currentIntegration = currentMember.getIntegration() == null ? 0 : currentMember.getIntegration();
+            currentMember.setIntegration(currentIntegration - orderParam.getUseIntegration());
         }
         //删除购物车中的下单商品
         deleteCartItemList(cartPromotionItemList, currentMember);
@@ -284,6 +297,13 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
             Asserts.fail("订单状态不可支付");
         }
         OmsOrderDetail orderDetail = portalOrderDao.getDetail(orderId);
+        if (orderDetail == null || CollectionUtils.isEmpty(orderDetail.getOrderItemList())) {
+            return 0;
+        }
+        // 秒杀订单未锁定 lock_stock，支付时只扣真实库存
+        if (Integer.valueOf(1).equals(orderDetail.getOrderType())) {
+            return portalOrderDao.decreaseSkuStockOnly(orderDetail.getOrderItemList());
+        }
         return portalOrderDao.updateSkuStock(orderDetail.getOrderItemList());
     }
 
@@ -316,53 +336,45 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         if (CollectionUtils.isEmpty(timeOutOrders)) {
             return count;
         }
-        //修改订单状态为交易取消
-        List<Long> ids = new ArrayList<>();
         for (OmsOrderDetail timeOutOrder : timeOutOrders) {
-            ids.add(timeOutOrder.getId());
-        }
-        portalOrderDao.updateOrderStatus(ids, 4);
-        for (OmsOrderDetail timeOutOrder : timeOutOrders) {
-            //解除订单商品库存锁定
-            portalOrderDao.releaseSkuStockLock(timeOutOrder.getOrderItemList());
-            //修改优惠券使用状态
+            // 仅成功从待付款迁移到关闭的调用方才释放资源，避免与延迟取消/用户取消竞态
+            int updated = portalOrderDao.cancelPendingOrder(timeOutOrder.getId());
+            if (updated == 0) {
+                continue;
+            }
+            count++;
+            if (!CollectionUtils.isEmpty(timeOutOrder.getOrderItemList())
+                    && !Integer.valueOf(1).equals(timeOutOrder.getOrderType())) {
+                portalOrderDao.releaseSkuStockLock(timeOutOrder.getOrderItemList());
+            }
             updateCouponStatus(timeOutOrder.getCouponId(), timeOutOrder.getMemberId(), 0);
-            //返还使用积分
-            if (timeOutOrder.getUseIntegration() != null) {
-                UmsMember member = memberService.getById(timeOutOrder.getMemberId());
-                memberService.updateIntegration(timeOutOrder.getMemberId(), member.getIntegration() + timeOutOrder.getUseIntegration());
+            if (timeOutOrder.getUseIntegration() != null && timeOutOrder.getUseIntegration() > 0) {
+                portalOrderDao.adjustMemberIntegration(timeOutOrder.getMemberId(), timeOutOrder.getUseIntegration());
             }
         }
-        return timeOutOrders.size();
+        return count;
     }
 
     @Override
     public void cancelOrder(Long orderId) {
-        OmsOrderExample example = new OmsOrderExample();
-        example.createCriteria().andIdEqualTo(orderId).andStatusEqualTo(0).andDeleteStatusEqualTo(0);
-        List<OmsOrder> cancelOrderList = orderMapper.selectByExample(example);
-        if (CollectionUtils.isEmpty(cancelOrderList)) {
+        OmsOrder cancelOrder = orderMapper.selectByPrimaryKey(orderId);
+        if (cancelOrder == null || cancelOrder.getDeleteStatus() == 1 || cancelOrder.getStatus() != 0) {
             return;
         }
-        OmsOrder cancelOrder = cancelOrderList.get(0);
-        if (cancelOrder != null) {
-            //修改订单状态为取消
-            cancelOrder.setStatus(4);
-            orderMapper.updateByPrimaryKeySelective(cancelOrder);
-            OmsOrderItemExample orderItemExample = new OmsOrderItemExample();
-            orderItemExample.createCriteria().andOrderIdEqualTo(orderId);
-            List<OmsOrderItem> orderItemList = orderItemMapper.selectByExample(orderItemExample);
-            //解除订单商品库存锁定
-            if (!CollectionUtils.isEmpty(orderItemList)) {
-                portalOrderDao.releaseSkuStockLock(orderItemList);
-            }
-            //修改优惠券使用状态
-            updateCouponStatus(cancelOrder.getCouponId(), cancelOrder.getMemberId(), 0);
-            //返还使用积分
-            if (cancelOrder.getUseIntegration() != null) {
-                UmsMember member = memberService.getById(cancelOrder.getMemberId());
-                memberService.updateIntegration(cancelOrder.getMemberId(), member.getIntegration() + cancelOrder.getUseIntegration());
-            }
+        int updated = portalOrderDao.cancelPendingOrder(orderId);
+        if (updated == 0) {
+            return;
+        }
+        OmsOrderItemExample orderItemExample = new OmsOrderItemExample();
+        orderItemExample.createCriteria().andOrderIdEqualTo(orderId);
+        List<OmsOrderItem> orderItemList = orderItemMapper.selectByExample(orderItemExample);
+        // 秒杀订单未锁定 lock_stock，取消时无需释放
+        if (!CollectionUtils.isEmpty(orderItemList) && !Integer.valueOf(1).equals(cancelOrder.getOrderType())) {
+            portalOrderDao.releaseSkuStockLock(orderItemList);
+        }
+        updateCouponStatus(cancelOrder.getCouponId(), cancelOrder.getMemberId(), 0);
+        if (cancelOrder.getUseIntegration() != null && cancelOrder.getUseIntegration() > 0) {
+            portalOrderDao.adjustMemberIntegration(cancelOrder.getMemberId(), cancelOrder.getUseIntegration());
         }
     }
 
@@ -805,6 +817,9 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
      * 判断下单商品是否都有库存
      */
     private boolean hasStock(List<CartPromotionItem> cartPromotionItemList) {
+        if (CollectionUtils.isEmpty(cartPromotionItemList)) {
+            return false;
+        }
         for (CartPromotionItem cartPromotionItem : cartPromotionItemList) {
             if (cartPromotionItem.getRealStock()==null //判断真实库存是否为空
                     ||cartPromotionItem.getRealStock() <= 0 //判断真实库存是否小于0
@@ -933,6 +948,25 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         result.put("order", snapshot.getOrder());
         result.put("orderItemList", snapshot.getOrderItemList());
         return result;
+    }
+
+    private void scheduleIdempotentResult(Long memberId, String requestId, Map<String, Object> result, String processingKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            saveIdempotentResult(memberId, requestId, result);
+            stringRedisTemplate.delete(processingKey);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                saveIdempotentResult(memberId, requestId, result);
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                stringRedisTemplate.delete(processingKey);
+            }
+        });
     }
 
     private void saveIdempotentResult(Long memberId, String requestId, Map<String, Object> result) {

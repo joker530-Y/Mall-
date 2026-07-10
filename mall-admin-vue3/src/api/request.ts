@@ -19,7 +19,26 @@ export type PageResult<T> = {
 
 let requestSequence = 0
 
-function handleUnauthorized(message: string) {
+function readAuthorization() {
+  try {
+    const auth = useAuthStore()
+    if (auth.authorization) return auth.authorization
+  } catch {
+    // Pinia 尚未就绪
+  }
+  return ''
+}
+
+function handleUnauthorized(message: string, requestAuthorization?: string) {
+  const currentAuthorization = readAuthorization()
+  // 忽略过期请求：旧 token 的 401 不应清掉刚登录的新会话
+  if (
+    requestAuthorization &&
+    currentAuthorization &&
+    requestAuthorization !== currentAuthorization
+  ) {
+    return
+  }
   const auth = useAuthStore()
   auth.clearSession()
   ElMessage.error(message || '登录已失效，请重新登录')
@@ -45,9 +64,9 @@ const request = axios.create({
 })
 
 request.interceptors.request.use((config) => {
-  const auth = useAuthStore()
-  if (auth.authorization) {
-    config.headers.Authorization = auth.authorization
+  const authorization = readAuthorization()
+  if (authorization) {
+    config.headers.Authorization = authorization
   }
   const seq = ++requestSequence
   config.headers['X-Request-Seq'] = String(seq)
@@ -59,8 +78,9 @@ request.interceptors.response.use(
     const result = response.data as CommonResult<unknown>
     if (result && typeof result.code === 'number' && result.code !== 200) {
       const message = result.message || '请求失败'
+      const requestAuthorization = String(response.config.headers?.Authorization || '')
       if (result.code === 401) {
-        handleUnauthorized(message)
+        handleUnauthorized(message, requestAuthorization)
         return Promise.reject(new ApiError('unauthorized', message, result.code))
       }
       if (result.code === 403) {
@@ -75,8 +95,9 @@ request.interceptors.response.use(
   },
   (error) => {
     const apiError = toApiError(error)
+    const requestAuthorization = String(error?.config?.headers?.Authorization || '')
     if (apiError.kind === 'unauthorized') {
-      handleUnauthorized(apiError.message)
+      handleUnauthorized(apiError.message, requestAuthorization)
       return Promise.reject(apiError)
     }
     if (apiError.kind === 'forbidden') {

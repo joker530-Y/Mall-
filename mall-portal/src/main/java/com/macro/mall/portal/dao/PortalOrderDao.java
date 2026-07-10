@@ -17,9 +17,14 @@ public interface PortalOrderDao {
     OmsOrderDetail getDetail(@Param("orderId") Long orderId);
 
     /**
-     * 修改 pms_sku_stock表的锁定库存及真实库存
+     * 修改 pms_sku_stock表的锁定库存及真实库存（普通订单支付）
      */
     int updateSkuStock(@Param("itemList") List<OmsOrderItem> orderItemList);
+
+    /**
+     * 秒杀订单支付：仅扣减真实库存，不触碰 lock_stock
+     */
+    int decreaseSkuStockOnly(@Param("itemList") List<OmsOrderItem> orderItemList);
 
     /**
      * 获取超时订单
@@ -28,9 +33,14 @@ public interface PortalOrderDao {
     List<OmsOrderDetail> getTimeOutOrders(@Param("minute") Integer minute);
 
     /**
-     * 批量修改订单状态
+     * 批量修改订单状态（仅 status=0 的待付款订单）
      */
     int updateOrderStatus(@Param("ids") List<Long> ids,@Param("status") Integer status);
+
+    /**
+     * 条件取消单个待付款订单，返回实际更新行数
+     */
+    int cancelPendingOrder(@Param("orderId") Long orderId);
 
     /**
      * 解除取消订单的库存锁定
@@ -41,5 +51,10 @@ public interface PortalOrderDao {
      * 条件锁定库存：仅当可用库存充足时增加 lock_stock
      */
     int lockSkuStock(@Param("skuId") Long skuId, @Param("quantity") Integer quantity);
+
+    /**
+     * 原子增减会员积分，不足时返回 0
+     */
+    int adjustMemberIntegration(@Param("memberId") Long memberId, @Param("delta") Integer delta);
 
 }

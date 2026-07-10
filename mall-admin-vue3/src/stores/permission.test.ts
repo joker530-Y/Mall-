@@ -28,10 +28,22 @@ describe('permission store', () => {
     expect(routes.some((route) => route.path === '/seckill/dashboard')).toBe(false)
   })
 
-  it('derives seckill permissions from flash menu', () => {
+  it('derives seckill read permission from flash menu', () => {
     const permissions = collectPermissionsFromMenus(sampleMenus)
     expect(permissions).toContain('seckill:manage:read')
-    expect(permissions).toContain('seckill:manage:write')
+    expect(permissions).not.toContain('seckill:manage:write')
+  })
+
+  it('derives product and order permissions from menus', () => {
+    const menus: MenuItem[] = [
+      { id: 1, parentId: 0, title: '商品', level: 0, sort: 0, name: 'pms', icon: 'product', hidden: 0 },
+      { id: 2, parentId: 1, title: '商品列表', level: 1, sort: 0, name: 'product', icon: 'product-list', hidden: 0 },
+      { id: 3, parentId: 0, title: '订单', level: 0, sort: 0, name: 'oms', icon: 'order', hidden: 0 },
+      { id: 4, parentId: 3, title: '订单列表', level: 1, sort: 0, name: 'order', icon: 'order-list', hidden: 0 }
+    ]
+    const permissions = collectPermissionsFromMenus(menus)
+    expect(permissions).toContain('product:edit')
+    expect(permissions).toContain('order:read')
   })
 
   it('denies unknown permissions when not granted', () => {

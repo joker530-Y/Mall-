@@ -117,18 +117,25 @@ async function pollResult() {
   stopPolling()
   pollAttempts = 0
   const pollOnce = async () => {
-    result.value = await getSeckillResult(relationId.value)
-    pollAttempts += 1
-    if (result.value && FINAL_STATUSES.has(result.value.status)) {
+    try {
+      result.value = await getSeckillResult(relationId.value)
+      pollAttempts += 1
+      if (result.value && FINAL_STATUSES.has(result.value.status)) {
+        stopPolling()
+      } else if (pollAttempts >= 30) {
+        stopPolling()
+        error.value = '抢购结果查询超时，请稍后在订单列表查看'
+      }
+    } catch (err) {
       stopPolling()
-    } else if (pollAttempts >= 30) {
-      stopPolling()
-      error.value = '抢购结果查询超时，请稍后在订单列表查看'
+      error.value = err instanceof Error ? err.message : '抢购结果查询失败'
     }
   }
   await pollOnce()
-  if (!result.value || !FINAL_STATUSES.has(result.value.status)) {
-    timer = setInterval(pollOnce, 2000)
+  if (!error.value && (!result.value || !FINAL_STATUSES.has(result.value.status))) {
+    timer = setInterval(() => {
+      void pollOnce()
+    }, 2000)
   }
 }
 
@@ -177,6 +184,9 @@ async function submit() {
       payType: 1
     })
     await pollResult()
+  } catch (err) {
+    stopPolling()
+    error.value = err instanceof Error ? err.message : '提交秒杀失败'
   } finally {
     submitting.value = false
   }

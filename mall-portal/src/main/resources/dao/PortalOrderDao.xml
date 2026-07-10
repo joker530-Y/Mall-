@@ -14,6 +14,8 @@
             o.coupon_id,
             o.integration,
             o.member_id,
+            o.order_type,
+            o.use_integration,
             ot.id ot_id,
             ot.product_name ot_product_name,
             ot.product_sku_id ot_product_sku_id,
@@ -33,6 +35,7 @@
             o.coupon_id,
             o.integration,
             o.member_id,
+            o.order_type,
             o.use_integration,
             ot.id               ot_id,
             ot.product_name     ot_product_name,
@@ -65,21 +68,52 @@
         <foreach collection="itemList" item="item" separator="," open="(" close=")">
             #{item.productSkuId}
         </foreach>
+        AND
+        <foreach collection="itemList" item="item" separator=" AND " open="(" close=")">
+            (id &lt;&gt; #{item.productSkuId} OR (stock &gt;= #{item.productQuantity} AND lock_stock &gt;= #{item.productQuantity}))
+        </foreach>
+    </update>
+    <update id="decreaseSkuStockOnly">
+        UPDATE pms_sku_stock
+        SET
+            stock = CASE id
+            <foreach collection="itemList" item="item">
+              WHEN #{item.productSkuId} THEN stock - #{item.productQuantity}
+            </foreach>
+            END
+        WHERE
+            id IN
+        <foreach collection="itemList" item="item" separator="," open="(" close=")">
+            #{item.productSkuId}
+        </foreach>
+        AND
+        <foreach collection="itemList" item="item" separator=" AND " open="(" close=")">
+            (id &lt;&gt; #{item.productSkuId} OR stock &gt;= #{item.productQuantity})
+        </foreach>
     </update>
     <update id="updateOrderStatus">
         update oms_order
         set status=#{status}
-        where id in
+        where status = 0
+          and delete_status = 0
+          and id in
         <foreach collection="ids" item="id" separator="," open="(" close=")">
             #{id}
         </foreach>
+    </update>
+    <update id="cancelPendingOrder">
+        UPDATE oms_order
+        SET status = 4
+        WHERE id = #{orderId}
+          AND status = 0
+          AND delete_status = 0
     </update>
     <update id="releaseSkuStockLock">
         UPDATE pms_sku_stock
         SET
         lock_stock = CASE id
         <foreach collection="itemList" item="item">
-            WHEN #{item.productSkuId} THEN lock_stock - #{item.productQuantity}
+            WHEN #{item.productSkuId} THEN GREATEST(lock_stock - #{item.productQuantity}, 0)
         </foreach>
         END
         WHERE
@@ -93,5 +127,11 @@
         SET lock_stock = lock_stock + #{quantity}
         WHERE id = #{skuId}
           AND stock - lock_stock >= #{quantity}
+    </update>
+    <update id="adjustMemberIntegration">
+        UPDATE ums_member
+        SET integration = IFNULL(integration, 0) + #{delta}
+        WHERE id = #{memberId}
+          AND IFNULL(integration, 0) + #{delta} &gt;= 0
     </update>
 </mapper>

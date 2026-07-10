@@ -50,6 +50,11 @@ logging:
 logstash:
   host: ${LOGSTASH_HOST:logstash}
 
+mall:
+  payment:
+    mock-only: true
+    mock-pay-enabled: false
+
 alipay:
   gatewayUrl: ${ALIPAY_GATEWAY_URL:https://openapi-sandbox.dl.alipaydev.com/gateway.do}
   appId: ${ALIPAY_APP_ID}

@@ -73,9 +73,9 @@ jobs:
           sudo apt-get install -y mysql-client
           mysql -h127.0.0.1 -uroot -proot mall < document/sql/mall.sql
           mysql -h127.0.0.1 -uroot -proot mall < document/sql/seckill_baseline_schema.sql
-          mysql -h127.0.0.1 -uroot -proot mall < document/sql/phase2_performance_indexes.sql || true
-          mysql -h127.0.0.1 -uroot -proot mall < document/sql/migrations/add_order_sn_unique_index.sql || true
-          mysql -h127.0.0.1 -uroot -proot mall < document/sql/migrations/add_seckill_manage_resource.sql || true
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/phase2_performance_indexes.sql
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/migrations/add_order_sn_unique_index.sql
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/migrations/add_seckill_manage_resource.sql
 
       - name: Run Maven tests
         run: mvn clean test -DskipTests=false

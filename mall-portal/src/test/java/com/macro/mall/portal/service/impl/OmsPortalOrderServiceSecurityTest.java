@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -134,15 +135,55 @@ class OmsPortalOrderServiceSecurityTest {
     @Test
     void paySuccess_shouldDeductStockOnlyOnce() {
         OmsOrderDetail orderDetail = new OmsOrderDetail();
+        orderDetail.setOrderType(0);
         orderDetail.setOrderItemList(Collections.emptyList());
         when(orderMapper.updateByExampleSelective(any(OmsOrder.class), any(OmsOrderExample.class))).thenReturn(1);
         when(portalOrderDao.getDetail(100L)).thenReturn(orderDetail);
-        when(portalOrderDao.updateSkuStock(Collections.emptyList())).thenReturn(0);
 
         Integer result = orderService.paySuccess(100L, 1);
 
         assertEquals(0, result);
-        verify(portalOrderDao).updateSkuStock(Collections.emptyList());
+        verify(portalOrderDao, never()).updateSkuStock(any());
+        verify(portalOrderDao, never()).decreaseSkuStockOnly(any());
+    }
+
+    @Test
+    void paySuccess_shouldUseSeckillStockPathForSeckillOrders() {
+        OmsOrderDetail orderDetail = new OmsOrderDetail();
+        orderDetail.setOrderType(1);
+        orderDetail.setOrderItemList(Collections.emptyList());
+        when(orderMapper.updateByExampleSelective(any(OmsOrder.class), any(OmsOrderExample.class))).thenReturn(1);
+        when(portalOrderDao.getDetail(100L)).thenReturn(orderDetail);
+
+        Integer result = orderService.paySuccess(100L, 1);
+
+        assertEquals(0, result);
+        verify(portalOrderDao, never()).updateSkuStock(any());
+        verify(portalOrderDao, never()).decreaseSkuStockOnly(any());
+    }
+
+    @Test
+    void generateOrder_shouldRejectEmptyCartIds() {
+        UmsMember member = member(1L, "memberA");
+        when(memberService.getCurrentMember()).thenReturn(member);
+        OrderParam param = new OrderParam();
+        param.setMemberReceiveAddressId(1L);
+        param.setCartIds(Collections.emptyList());
+
+        ApiException exception = assertThrows(ApiException.class, () -> orderService.generateOrder(param, null));
+
+        assertTrue(exception.getMessage().contains("购物车"));
+    }
+
+    @Test
+    void cancelOrder_shouldSkipReleaseWhenAlreadyCancelled() {
+        when(orderMapper.selectByPrimaryKey(100L)).thenReturn(order(100L, 1L, 0));
+        when(portalOrderDao.cancelPendingOrder(100L)).thenReturn(0);
+
+        orderService.cancelOrder(100L);
+
+        verify(portalOrderDao, never()).releaseSkuStockLock(any());
+        verify(portalOrderDao, never()).adjustMemberIntegration(anyLong(), anyInt());
     }
 
     private UmsMember member(Long id, String username) {

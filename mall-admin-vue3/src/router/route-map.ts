@@ -28,13 +28,13 @@ export const MENU_ROUTE_REGISTRY: Record<string, RouteModule> = {
     path: '/product/list',
     name: 'product-list',
     component: () => import('@/views/product/ProductListView.vue'),
-    meta: { title: '商品列表', icon: 'Goods' }
+    meta: { title: '商品列表', icon: 'Goods', permission: 'product:edit' }
   },
   addProduct: {
     path: '/product/list',
     name: 'product-add-alias',
     component: () => import('@/views/product/ProductListView.vue'),
-    meta: { title: '添加商品', hidden: true }
+    meta: { title: '添加商品', hidden: true, permission: 'product:edit' }
   },
   productCate: {
     path: '/product/categories',
@@ -58,7 +58,7 @@ export const MENU_ROUTE_REGISTRY: Record<string, RouteModule> = {
     path: '/order/list',
     name: 'order-list',
     component: () => import('@/views/order/OrderListView.vue'),
-    meta: { title: '订单列表', icon: 'List' }
+    meta: { title: '订单列表', icon: 'List', permission: 'order:read' }
   },
   orderSetting: {
     path: '/after-sales/settings',
@@ -169,13 +169,13 @@ const HIDDEN_ROUTES: RouteRecordRaw[] = [
     path: '/product/:id',
     name: 'product-detail',
     component: () => import('@/views/product/ProductDetailView.vue'),
-    meta: { title: '编辑商品', hidden: true }
+    meta: { title: '编辑商品', hidden: true, permission: 'product:edit' }
   },
   {
     path: '/order/:id',
     name: 'order-detail',
     component: () => import('@/views/order/OrderDetailView.vue'),
-    meta: { title: '订单详情', hidden: true }
+    meta: { title: '订单详情', hidden: true, permission: 'order:read' }
   },
   {
     path: '/marketing/flash-promotions/:id',

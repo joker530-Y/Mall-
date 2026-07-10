@@ -69,7 +69,10 @@ export function setupRouterGuards(router: Router) {
       return to.fullPath
     }
 
-    const permission = to.meta.permission as string | undefined
+    const permission = to.matched
+      .map((route) => route.meta.permission as string | undefined)
+      .filter(Boolean)
+      .pop()
     if (permission && !auth.hasPermission(permission)) {
       return { name: 'forbidden' }
     }

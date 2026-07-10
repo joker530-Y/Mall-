@@ -43,7 +43,6 @@ secure:
       - /*/*.png
       - /favicon.ico
       - /admin/login
-      - /admin/register
 
 springdoc:
   swagger-ui:

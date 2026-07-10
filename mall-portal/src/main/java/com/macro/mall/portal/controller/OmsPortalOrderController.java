@@ -2,6 +2,7 @@ package com.macro.mall.portal.controller;
 
 import com.macro.mall.common.api.CommonPage;
 import com.macro.mall.common.api.CommonResult;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.portal.domain.ConfirmOrderParam;
 import com.macro.mall.portal.domain.ConfirmOrderResult;
 import com.macro.mall.portal.domain.OmsOrderDetail;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +30,8 @@ import java.util.Map;
 public class OmsPortalOrderController {
     @Autowired
     private OmsPortalOrderService portalOrderService;
+    @Value("${mall.payment.mock-pay-enabled:true}")
+    private boolean mockPayEnabled;
 
     @Operation(summary = "根据购物车信息生成确认单")
     @RequestMapping(value = "/generateConfirmOrder", method = RequestMethod.POST)
@@ -51,6 +55,9 @@ public class OmsPortalOrderController {
     @ResponseBody
     public CommonResult mockPay(@PathVariable Long orderId,
                                 @RequestParam(required = false) Integer payType) {
+        if (!mockPayEnabled) {
+            Asserts.fail("当前环境已禁用模拟支付");
+        }
         Integer count = portalOrderService.mockPay(orderId, payType);
         if (count != null && count == 0) {
             return CommonResult.success(count, "订单已支付");

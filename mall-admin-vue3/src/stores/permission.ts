@@ -24,7 +24,12 @@ export function collectPermissionsFromMenus(menus: MenuItem[]): string[] {
   }
   if (names.has('flash')) {
     permissions.add('seckill:manage:read')
-    permissions.add('seckill:manage:write')
+  }
+  if (names.has('product') || names.has('addProduct')) {
+    permissions.add('product:edit')
+  }
+  if (names.has('order')) {
+    permissions.add('order:read')
   }
   return [...permissions]
 }

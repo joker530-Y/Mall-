@@ -46,7 +46,11 @@ const auth = useAuthStore()
 const keyword = ref('')
 
 onMounted(() => {
-  if (auth.isAuthenticated) auth.bootstrap()
+  if (auth.isAuthenticated) {
+    void auth.bootstrap().catch(() => {
+      // 会话恢复失败时由请求拦截器处理 401；非致命错误降级展示
+    })
+  }
 })
 
 function goSearch() {
