@@ -16,8 +16,11 @@ import com.macro.mall.portal.dao.PortalOrderItemDao;
 import com.macro.mall.portal.dao.SmsCouponHistoryDao;
 import com.macro.mall.portal.domain.*;
 import com.macro.mall.portal.service.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -37,10 +40,12 @@ import java.util.stream.Collectors;
  */
 @Service
 public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(OmsPortalOrderServiceImpl.class);
     private static final String ORDER_IDEMPOTENT_KEY_PREFIX = "mall:portal:order:idempotent:";
     private static final String ORDER_PROCESSING_KEY_PREFIX = "mall:portal:order:processing:";
     private static final long ORDER_IDEMPOTENT_TTL_SECONDS = 86400L;
     private static final long ORDER_PROCESSING_TTL_SECONDS = 300L;
+    private static final int MAX_REQUEST_ID_LENGTH = 128;
 
     @Autowired
     private UmsMemberService memberService;
@@ -102,30 +107,56 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         if (StrUtil.isBlank(requestId)) {
             return doGenerateOrder(orderParam, currentMember);
         }
+        requestId = requestId.trim();
+        if (requestId.length() > MAX_REQUEST_ID_LENGTH) {
+            Asserts.fail("X-Request-Id 长度不能超过128个字符");
+        }
         Map<String, Object> cached = getIdempotentResult(currentMember.getId(), requestId);
         if (cached != null) {
             return cached;
         }
+        Map<String, Object> durableResult = getDurableIdempotentResult(currentMember.getId(), requestId);
+        if (durableResult != null) {
+            return durableResult;
+        }
         String processingKey = buildProcessingKey(currentMember.getId(), requestId);
-        Boolean acquired = stringRedisTemplate.opsForValue()
-                .setIfAbsent(processingKey, "1", ORDER_PROCESSING_TTL_SECONDS, TimeUnit.SECONDS);
+        Boolean acquired = tryAcquireProcessingKey(processingKey);
         if (Boolean.FALSE.equals(acquired)) {
             cached = getIdempotentResult(currentMember.getId(), requestId);
             if (cached != null) {
                 return cached;
+            }
+            durableResult = getDurableIdempotentResult(currentMember.getId(), requestId);
+            if (durableResult != null) {
+                return durableResult;
             }
             Asserts.fail("订单处理中，请勿重复提交");
         }
         try {
             cached = getIdempotentResult(currentMember.getId(), requestId);
             if (cached != null) {
+                scheduleIdempotentResult(currentMember.getId(), requestId, cached, processingKey);
                 return cached;
             }
+            if (!reserveOrderRequest(currentMember.getId(), requestId)) {
+                durableResult = getDurableIdempotentResult(currentMember.getId(), requestId);
+                if (durableResult == null) {
+                    Asserts.fail("订单处理中，请勿重复提交");
+                }
+                scheduleIdempotentResult(currentMember.getId(), requestId, durableResult, processingKey);
+                return durableResult;
+            }
             Map<String, Object> result = doGenerateOrder(orderParam, currentMember);
+            OmsOrder createdOrder = (OmsOrder) result.get("order");
+            int bound = portalOrderDao.bindOrderRequest(
+                    currentMember.getId(), requestId, createdOrder.getId(), new Date());
+            if (bound != 1) {
+                Asserts.fail("保存订单幂等记录失败");
+            }
             scheduleIdempotentResult(currentMember.getId(), requestId, result, processingKey);
             return result;
         } catch (RuntimeException ex) {
-            stringRedisTemplate.delete(processingKey);
+            safeDeleteProcessingKey(processingKey);
             throw ex;
         }
     }
@@ -298,13 +329,38 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         }
         OmsOrderDetail orderDetail = portalOrderDao.getDetail(orderId);
         if (orderDetail == null || CollectionUtils.isEmpty(orderDetail.getOrderItemList())) {
-            return 0;
+            Asserts.fail("订单商品不存在，支付失败");
         }
+        List<OmsOrderItem> stockItems = aggregateStockItems(orderDetail.getOrderItemList());
+        int stockUpdated;
         // 秒杀订单未锁定 lock_stock，支付时只扣真实库存
         if (Integer.valueOf(1).equals(orderDetail.getOrderType())) {
-            return portalOrderDao.decreaseSkuStockOnly(orderDetail.getOrderItemList());
+            stockUpdated = portalOrderDao.decreaseSkuStockOnly(stockItems);
+        } else {
+            stockUpdated = portalOrderDao.updateSkuStock(stockItems);
         }
-        return portalOrderDao.updateSkuStock(orderDetail.getOrderItemList());
+        if (stockUpdated != stockItems.size()) {
+            Asserts.fail("库存扣减失败，支付已回滚");
+        }
+        return stockUpdated;
+    }
+
+    private List<OmsOrderItem> aggregateStockItems(List<OmsOrderItem> orderItems) {
+        Map<Long, Integer> quantityBySku = new LinkedHashMap<>();
+        for (OmsOrderItem item : orderItems) {
+            if (item.getProductSkuId() == null || item.getProductQuantity() == null || item.getProductQuantity() <= 0) {
+                Asserts.fail("订单商品库存信息无效");
+            }
+            quantityBySku.merge(item.getProductSkuId(), item.getProductQuantity(), Integer::sum);
+        }
+        List<OmsOrderItem> stockItems = new ArrayList<>();
+        quantityBySku.forEach((skuId, quantity) -> {
+            OmsOrderItem item = new OmsOrderItem();
+            item.setProductSkuId(skuId);
+            item.setProductQuantity(quantity);
+            stockItems.add(item);
+        });
+        return stockItems;
     }
 
     @Override
@@ -936,7 +992,14 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
     }
 
     private Map<String, Object> getIdempotentResult(Long memberId, String requestId) {
-        Object cached = redisService.get(buildIdempotentKey(memberId, requestId));
+        Object cached;
+        try {
+            cached = redisService.get(buildIdempotentKey(memberId, requestId));
+        } catch (RuntimeException ex) {
+            // Redis 仅作为加速层，数据库唯一键仍可保证最终幂等
+            LOGGER.warn("read order idempotent cache failed, memberId={}, requestId={}", memberId, requestId, ex);
+            return null;
+        }
         if (cached == null) {
             return null;
         }
@@ -950,23 +1013,74 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
         return result;
     }
 
+    private Boolean tryAcquireProcessingKey(String processingKey) {
+        try {
+            return stringRedisTemplate.opsForValue()
+                    .setIfAbsent(processingKey, "1", ORDER_PROCESSING_TTL_SECONDS, TimeUnit.SECONDS);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("acquire order processing key failed, fallback to database idempotency, key={}",
+                    processingKey, ex);
+            return null;
+        }
+    }
+
+    private boolean reserveOrderRequest(Long memberId, String requestId) {
+        try {
+            return portalOrderDao.insertOrderRequest(memberId, requestId, new Date()) == 1;
+        } catch (DuplicateKeyException ignored) {
+            return false;
+        }
+    }
+
+    private Map<String, Object> getDurableIdempotentResult(Long memberId, String requestId) {
+        Long orderId = portalOrderDao.getOrderIdByRequest(memberId, requestId);
+        if (orderId == null) {
+            return null;
+        }
+        OmsOrder order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null || !memberId.equals(order.getMemberId())) {
+            return null;
+        }
+        OmsOrderItemExample example = new OmsOrderItemExample();
+        example.createCriteria().andOrderIdEqualTo(orderId);
+        List<OmsOrderItem> orderItems = orderItemMapper.selectByExample(example);
+        Map<String, Object> result = new HashMap<>();
+        result.put("order", order);
+        result.put("orderItemList", orderItems);
+        return result;
+    }
+
     private void scheduleIdempotentResult(Long memberId, String requestId, Map<String, Object> result, String processingKey) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             saveIdempotentResult(memberId, requestId, result);
-            stringRedisTemplate.delete(processingKey);
+            safeDeleteProcessingKey(processingKey);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                saveIdempotentResult(memberId, requestId, result);
+                try {
+                    saveIdempotentResult(memberId, requestId, result);
+                } catch (RuntimeException ex) {
+                    // 数据库唯一键已提供最终幂等保障，缓存失败不能把已提交订单伪装成失败
+                    LOGGER.warn("cache committed order idempotent result failed, memberId={}, requestId={}",
+                            memberId, requestId, ex);
+                }
             }
 
             @Override
             public void afterCompletion(int status) {
-                stringRedisTemplate.delete(processingKey);
+                safeDeleteProcessingKey(processingKey);
             }
         });
+    }
+
+    private void safeDeleteProcessingKey(String processingKey) {
+        try {
+            stringRedisTemplate.delete(processingKey);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("delete order processing key failed, key={}", processingKey, ex);
+        }
     }
 
     private void saveIdempotentResult(Long memberId, String requestId, Map<String, Object> result) {

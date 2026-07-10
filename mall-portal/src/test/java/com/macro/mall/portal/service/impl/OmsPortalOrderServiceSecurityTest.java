@@ -7,6 +7,7 @@ import com.macro.mall.mapper.OmsOrderItemMapper;
 import com.macro.mall.mapper.OmsOrderMapper;
 import com.macro.mall.model.OmsOrder;
 import com.macro.mall.model.OmsOrderExample;
+import com.macro.mall.model.OmsOrderItem;
 import com.macro.mall.model.UmsMember;
 import com.macro.mall.portal.dao.PortalOrderDao;
 import com.macro.mall.portal.domain.OmsOrderDetail;
@@ -22,6 +23,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,6 +91,50 @@ class OmsPortalOrderServiceSecurityTest {
     }
 
     @Test
+    void generateOrder_shouldReturnDurableResultWhenRedisCacheIsMissing() {
+        UmsMember member = member(1L, "memberA");
+        OmsOrder existingOrder = order(100L, 1L, 0);
+        when(memberService.getCurrentMember()).thenReturn(member);
+        when(redisService.get("mall:portal:order:idempotent:1:req-db")).thenReturn(null);
+        when(portalOrderDao.getOrderIdByRequest(1L, "req-db")).thenReturn(100L);
+        when(orderMapper.selectByPrimaryKey(100L)).thenReturn(existingOrder);
+        when(orderItemMapper.selectByExample(any())).thenReturn(Collections.emptyList());
+
+        Map<String, Object> result = orderService.generateOrder(new OrderParam(), "req-db");
+
+        assertEquals(100L, ((OmsOrder) result.get("order")).getId());
+        verify(portalOrderDao, never()).insertOrderRequest(anyLong(), anyString(), any());
+        verify(orderMapper, never()).insert(any());
+    }
+
+    @Test
+    void generateOrder_shouldUseDatabaseIdempotencyWhenRedisIsUnavailable() {
+        UmsMember member = member(1L, "memberA");
+        OmsOrder existingOrder = order(100L, 1L, 0);
+        when(memberService.getCurrentMember()).thenReturn(member);
+        when(redisService.get("mall:portal:order:idempotent:1:req-db"))
+                .thenThrow(new IllegalStateException("redis unavailable"));
+        when(portalOrderDao.getOrderIdByRequest(1L, "req-db")).thenReturn(100L);
+        when(orderMapper.selectByPrimaryKey(100L)).thenReturn(existingOrder);
+        when(orderItemMapper.selectByExample(any())).thenReturn(Collections.emptyList());
+
+        Map<String, Object> result = orderService.generateOrder(new OrderParam(), "req-db");
+
+        assertEquals(100L, ((OmsOrder) result.get("order")).getId());
+        verify(orderMapper, never()).insert(any());
+    }
+
+    @Test
+    void generateOrder_shouldRejectOversizedRequestId() {
+        when(memberService.getCurrentMember()).thenReturn(member(1L, "memberA"));
+
+        ApiException exception = assertThrows(ApiException.class,
+                () -> orderService.generateOrder(new OrderParam(), "x".repeat(129)));
+
+        assertTrue(exception.getMessage().contains("128"));
+    }
+
+    @Test
     void mockPay_shouldRejectOrderOwnedByAnotherMember() {
         when(memberService.getCurrentMember()).thenReturn(member(1L, "memberA"));
         when(orderMapper.selectByPrimaryKey(100L)).thenReturn(order(100L, 2L, 0));
@@ -136,14 +182,15 @@ class OmsPortalOrderServiceSecurityTest {
     void paySuccess_shouldDeductStockOnlyOnce() {
         OmsOrderDetail orderDetail = new OmsOrderDetail();
         orderDetail.setOrderType(0);
-        orderDetail.setOrderItemList(Collections.emptyList());
+        orderDetail.setOrderItemList(List.of(orderItem(10L, 2)));
         when(orderMapper.updateByExampleSelective(any(OmsOrder.class), any(OmsOrderExample.class))).thenReturn(1);
         when(portalOrderDao.getDetail(100L)).thenReturn(orderDetail);
+        when(portalOrderDao.updateSkuStock(any())).thenReturn(1);
 
         Integer result = orderService.paySuccess(100L, 1);
 
-        assertEquals(0, result);
-        verify(portalOrderDao, never()).updateSkuStock(any());
+        assertEquals(1, result);
+        verify(portalOrderDao).updateSkuStock(any());
         verify(portalOrderDao, never()).decreaseSkuStockOnly(any());
     }
 
@@ -151,15 +198,30 @@ class OmsPortalOrderServiceSecurityTest {
     void paySuccess_shouldUseSeckillStockPathForSeckillOrders() {
         OmsOrderDetail orderDetail = new OmsOrderDetail();
         orderDetail.setOrderType(1);
-        orderDetail.setOrderItemList(Collections.emptyList());
+        orderDetail.setOrderItemList(List.of(orderItem(10L, 1)));
         when(orderMapper.updateByExampleSelective(any(OmsOrder.class), any(OmsOrderExample.class))).thenReturn(1);
         when(portalOrderDao.getDetail(100L)).thenReturn(orderDetail);
+        when(portalOrderDao.decreaseSkuStockOnly(any())).thenReturn(1);
 
         Integer result = orderService.paySuccess(100L, 1);
 
-        assertEquals(0, result);
+        assertEquals(1, result);
         verify(portalOrderDao, never()).updateSkuStock(any());
-        verify(portalOrderDao, never()).decreaseSkuStockOnly(any());
+        verify(portalOrderDao).decreaseSkuStockOnly(any());
+    }
+
+    @Test
+    void paySuccess_shouldFailWhenStockWasNotUpdated() {
+        OmsOrderDetail orderDetail = new OmsOrderDetail();
+        orderDetail.setOrderType(0);
+        orderDetail.setOrderItemList(List.of(orderItem(10L, 1)));
+        when(orderMapper.updateByExampleSelective(any(OmsOrder.class), any(OmsOrderExample.class))).thenReturn(1);
+        when(portalOrderDao.getDetail(100L)).thenReturn(orderDetail);
+        when(portalOrderDao.updateSkuStock(any())).thenReturn(0);
+
+        ApiException exception = assertThrows(ApiException.class, () -> orderService.paySuccess(100L, 1));
+
+        assertTrue(exception.getMessage().contains("回滚"));
     }
 
     @Test
@@ -201,5 +263,12 @@ class OmsPortalOrderServiceSecurityTest {
         order.setDeleteStatus(0);
         order.setPayType(1);
         return order;
+    }
+
+    private OmsOrderItem orderItem(Long skuId, Integer quantity) {
+        OmsOrderItem item = new OmsOrderItem();
+        item.setProductSkuId(skuId);
+        item.setProductQuantity(quantity);
+        return item;
     }
 }

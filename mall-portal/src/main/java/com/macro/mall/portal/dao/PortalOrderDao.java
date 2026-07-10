@@ -4,6 +4,7 @@ import com.macro.mall.model.OmsOrderItem;
 import com.macro.mall.portal.domain.OmsOrderDetail;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -56,5 +57,26 @@ public interface PortalOrderDao {
      * 原子增减会员积分，不足时返回 0
      */
     int adjustMemberIntegration(@Param("memberId") Long memberId, @Param("delta") Integer delta);
+
+    /**
+     * 在数据库事务内占用幂等请求键，唯一约束防止重复下单
+     */
+    int insertOrderRequest(@Param("memberId") Long memberId,
+                           @Param("requestId") String requestId,
+                           @Param("createTime") Date createTime);
+
+    /**
+     * 获取幂等请求已绑定的订单ID
+     */
+    Long getOrderIdByRequest(@Param("memberId") Long memberId,
+                             @Param("requestId") String requestId);
+
+    /**
+     * 将幂等请求与本事务创建的订单绑定
+     */
+    int bindOrderRequest(@Param("memberId") Long memberId,
+                         @Param("requestId") String requestId,
+                         @Param("orderId") Long orderId,
+                         @Param("updateTime") Date updateTime);
 
 }

@@ -80,6 +80,7 @@ Get-Content .\document\sql\mall.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\seckill_baseline_schema.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\phase2_performance_indexes.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_order_sn_unique_index.sql | mysql -uroot -proot -D mall
+Get-Content .\document\sql\migrations\add_order_request_idempotency.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_seckill_manage_resource.sql | mysql -uroot -proot -D mall
 ```
 

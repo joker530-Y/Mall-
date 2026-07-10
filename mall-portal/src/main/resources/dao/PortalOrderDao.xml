@@ -134,4 +134,23 @@
         WHERE id = #{memberId}
           AND IFNULL(integration, 0) + #{delta} &gt;= 0
     </update>
+    <insert id="insertOrderRequest">
+        INSERT INTO oms_order_request (member_id, request_id, create_time)
+        VALUES (#{memberId}, #{requestId}, #{createTime})
+    </insert>
+    <select id="getOrderIdByRequest" resultType="java.lang.Long">
+        SELECT order_id
+        FROM oms_order_request
+        WHERE member_id = #{memberId}
+          AND request_id = #{requestId}
+        LIMIT 1
+    </select>
+    <update id="bindOrderRequest">
+        UPDATE oms_order_request
+        SET order_id = #{orderId},
+            update_time = #{updateTime}
+        WHERE member_id = #{memberId}
+          AND request_id = #{requestId}
+          AND order_id IS NULL
+    </update>
 </mapper>
