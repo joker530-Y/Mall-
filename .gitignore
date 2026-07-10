@@ -17,6 +17,8 @@ document/jmeter/seckill-members.csv
 # Frontend generated artifacts #
 mall-admin-vue3/node_modules/
 mall-admin-vue3/dist/
+mall-portal-vue3/node_modules/
+mall-portal-vue3/dist/
 
 # Local verification artifacts #
 output/

@@ -14,7 +14,7 @@ function createStorageMock() {
 
 describe('auth store', () => {
   beforeEach(() => {
-    vi.stubGlobal('localStorage', createStorageMock())
+    vi.stubGlobal('sessionStorage', createStorageMock())
     setActivePinia(createPinia())
   })
 
@@ -27,10 +27,16 @@ describe('auth store', () => {
   it('clears local session state', () => {
     const auth = useAuthStore()
     auth.$patch({ token: 'abc', tokenHead: 'Bearer', username: 'admin' })
-    localStorage.setItem('mall-admin-vue3-token', 'abc')
+    sessionStorage.setItem('mall-admin-vue3-token', 'abc')
     auth.clearSession()
     expect(auth.authorization).toBe('')
     expect(auth.username).toBe('')
-    expect(localStorage.getItem('mall-admin-vue3-token')).toBeNull()
+    expect(sessionStorage.getItem('mall-admin-vue3-token')).toBeNull()
+  })
+
+  it('grants all permissions to super admin role', () => {
+    const auth = useAuthStore()
+    auth.$patch({ roles: ['超级管理员'] })
+    expect(auth.hasPermission('seckill:manage:write')).toBe(true)
   })
 })

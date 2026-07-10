@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class FlashPromotionProduct extends PmsProduct{
+    @Schema(title = "秒杀商品关系ID")
+    private Long relationId;
     @Schema(title = "秒杀价格")
     private BigDecimal flashPromotionPrice;
     @Schema(title = "用于秒杀到数量")

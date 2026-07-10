@@ -1,6 +1,7 @@
 package com.macro.mall.portal.service;
 
 import com.macro.mall.common.api.CommonPage;
+import com.macro.mall.portal.domain.ConfirmOrderParam;
 import com.macro.mall.portal.domain.ConfirmOrderResult;
 import com.macro.mall.portal.domain.OmsOrderDetail;
 import com.macro.mall.portal.domain.OrderParam;
@@ -17,13 +18,13 @@ public interface OmsPortalOrderService {
     /**
      * 根据用户购物车信息生成确认单信息
      */
-    ConfirmOrderResult generateConfirmOrder(List<Long> cartIds);
+    ConfirmOrderResult generateConfirmOrder(ConfirmOrderParam param);
 
     /**
      * 根据提交信息生成订单
      */
     @Transactional
-    Map<String, Object> generateOrder(OrderParam orderParam);
+    Map<String, Object> generateOrder(OrderParam orderParam, String requestId);
 
     /**
      * 支付成功后的回调（内部使用，需配合状态条件更新保证幂等）

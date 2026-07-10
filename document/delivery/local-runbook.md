@@ -18,6 +18,7 @@ Get-Content .\document\sql\mall.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\seckill_baseline_schema.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\phase2_performance_indexes.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_order_sn_unique_index.sql | mysql -uroot -proot -D mall
+Get-Content .\document\sql\migrations\add_seckill_manage_resource.sql | mysql -uroot -proot -D mall
 ```
 
 If MySQL reports that an index already exists, skip that `ALTER TABLE`.
@@ -38,10 +39,23 @@ Compile:
 mvn -pl mall-portal -am compile -DskipTests
 ```
 
-Run `mall-portal`:
+Run backends:
 
 ```powershell
-mvn -pl mall-portal spring-boot:run
+mvn -pl mall-admin spring-boot:run    # http://localhost:8080
+mvn -pl mall-portal spring-boot:run   # http://localhost:8085
+```
+
+Run frontends:
+
+```powershell
+cd mall-admin-vue3
+npm install
+npm run dev                           # http://localhost:5173
+
+cd ../mall-portal-vue3
+npm install
+npm run dev                           # http://localhost:5174
 ```
 
 Open Swagger UI:
@@ -49,6 +63,10 @@ Open Swagger UI:
 ```text
 http://localhost:8085/swagger-ui.html
 ```
+
+## Docker (optional)
+
+Use `document/docker/docker-compose-env.yml` for middleware and `document/docker/docker-compose-app.yml` for app images. Copy the root `.env.example` to `document/docker/.env` and fill in secrets before `docker compose up`.
 
 ## Seckill Reset And Warmup
 

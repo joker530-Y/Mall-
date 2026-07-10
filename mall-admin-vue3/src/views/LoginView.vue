@@ -26,11 +26,13 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { resolveInternalRedirect } from '@/utils/navigation'
 
+const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const formRef = ref<FormInstance>()
@@ -48,7 +50,11 @@ async function submit() {
   loading.value = true
   try {
     await auth.signIn(form.username, form.password)
-    router.push({ name: 'dashboard' })
+    const redirect = resolveInternalRedirect(
+      typeof route.query.redirect === 'string' ? route.query.redirect : undefined,
+      '/dashboard'
+    )
+    router.push(redirect)
   } finally {
     loading.value = false
   }

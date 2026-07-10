@@ -16,8 +16,8 @@
 
 - **秒杀链路**：Redis Lua 原子预扣库存 + 限购 + 重复下单校验，RabbitMQ 异步落库，脚本验证零超卖。
 - **性能优化**：Redis + Caffeine 两级缓存、SQL 索引、JMeter 压测报告。
-- **全栈闭环**：Vue 3 秒杀运营控制台 + 用户端模拟下单（登录 → 购物车 → 订单 → 模拟支付）。
-- **安全修复**：对象归属校验、模拟支付幂等、优惠券/库存条件更新。
+- **全栈闭环**：Vue 3 管理端 + 消费者商城端，覆盖登录 → 购物车 → 优惠券试算 → 订单 → 模拟支付。
+- **安全修复**：对象归属校验、模拟支付幂等、下单 `X-Request-Id` 幂等、优惠券/库存条件更新。
 - **AI 客服**：可切换 mock / OpenAI-compatible provider。
 
 ## 技术架构
@@ -26,6 +26,7 @@
 flowchart LR
   subgraph Frontend
     A[Vue3 Admin Console]
+    P[Vue3 Portal Mall]
   end
   subgraph Backend
     B[mall-admin]
@@ -38,6 +39,7 @@ flowchart LR
     G[(MongoDB)]
   end
   A --> B
+  P --> C
   B --> D
   C --> D
   C --> E
@@ -53,6 +55,7 @@ flowchart LR
 mall-admin      后台 API（商品/订单/促销/秒杀运营）
 mall-portal     前台 API（会员/购物车/订单/秒杀/AI 客服）
 mall-admin-vue3 Vue 3 秒杀运营控制台
+mall-portal-vue3 Vue 3 消费者商城端
 mall-search     Elasticsearch 商品搜索（可选）
 ```
 
@@ -77,6 +80,7 @@ Get-Content .\document\sql\mall.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\seckill_baseline_schema.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\phase2_performance_indexes.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_order_sn_unique_index.sql | mysql -uroot -proot -D mall
+Get-Content .\document\sql\migrations\add_seckill_manage_resource.sql | mysql -uroot -proot -D mall
 ```
 
 ### 3. 配置环境变量
@@ -96,18 +100,35 @@ mvn -pl mall-portal spring-boot:run   # http://localhost:8085
 
 ### 5. 启动前端
 
+**管理端（秒杀运营控制台）**
+
 ```powershell
 cd mall-admin-vue3
 npm install
 npm run dev    # http://localhost:5173
 ```
 
+**消费者商城端**
+
+```powershell
+cd mall-portal-vue3
+npm install
+npm run dev    # http://localhost:5174
+```
+
+开发环境下，两个前端分别通过 Vite 代理访问后端：
+
+| 前端 | 端口 | API 代理 |
+|------|------|----------|
+| `mall-admin-vue3` | 5173 | `/api/admin` → `http://localhost:8080` |
+| `mall-portal-vue3` | 5174 | `/api/portal` → `http://localhost:8085` |
+
 ## 演示账号与模拟支付
 
 | 角色 | 账号 | 密码 | 说明 |
 |------|------|------|------|
-| 后台管理员 | `admin` | `macro123` | 登录 Vue 控制台 |
-| 前台会员 | `test` | `123456` | Postman / 脚本演示下单 |
+| 后台管理员 | `admin` | `macro123` | 登录 Vue 控制台（5173） |
+| 前台会员 | `test` | `123456` | 登录消费者商城端（5174） |
 
 **模拟支付**：调用 `POST /order/mock-pay/{orderId}`，仅允许支付自己的待付款订单，金额从数据库订单读取，重复支付幂等。
 
@@ -134,6 +155,10 @@ mvn clean test -DskipTests=false
 
 # 前端构建与测试
 cd mall-admin-vue3
+npm run build
+npm run test
+
+cd ../mall-portal-vue3
 npm run build
 npm run test
 

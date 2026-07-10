@@ -71,6 +71,8 @@ mall:
     auth-code: "123456"
   payment:
     mock-only: true
+  seckill:
+    baseline-enabled: false
   ai:
     enabled: true
     provider: mock

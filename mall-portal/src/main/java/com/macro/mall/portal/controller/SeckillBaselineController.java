@@ -7,6 +7,7 @@ import com.macro.mall.portal.service.SeckillBaselineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,11 +20,16 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class SeckillBaselineController {
     @Autowired
     private SeckillBaselineService seckillBaselineService;
+    @Value("${mall.seckill.baseline-enabled:false}")
+    private boolean baselineEnabled;
 
     @Operation(summary = "Generate baseline seckill order")
     @RequestMapping(value = "/order", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult<BaselineSeckillOrderResult> generateOrder(@RequestBody BaselineSeckillOrderParam orderParam) {
+        if (!baselineEnabled) {
+            return CommonResult.forbidden(null);
+        }
         BaselineSeckillOrderResult result = seckillBaselineService.generateOrder(orderParam);
         return CommonResult.success(result, "baseline seckill order created");
     }

@@ -128,7 +128,8 @@ input {
 
 .content {
   padding: 20px;
-  background: #f4f6f8;
+  background: var(--color-page, #f4f6f8);
+  overflow-x: auto;
 }
 
 .page-stack {
@@ -148,10 +149,11 @@ input {
 }
 
 .panel {
-  border: 1px solid #dfe5ec;
-  border-radius: 8px;
+  border: 1px solid var(--color-border, #dfe5ec);
+  border-radius: var(--radius-card, 8px);
   background: #ffffff;
   padding: 16px;
+  overflow-x: auto;
 }
 
 .panel-header {

@@ -38,6 +38,10 @@ public class ConfirmOrderResult {
         private BigDecimal freightAmount;
         @Schema(title = "活动优惠")
         private BigDecimal promotionAmount;
+        @Schema(title = "优惠券优惠")
+        private BigDecimal couponAmount;
+        @Schema(title = "积分抵扣")
+        private BigDecimal integrationAmount;
         @Schema(title = "应付金额")
         private BigDecimal payAmount;
     }

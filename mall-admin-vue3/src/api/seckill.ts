@@ -63,6 +63,20 @@ export interface SeckillOrderLog {
   updateTime: string
 }
 
+export interface FlashPromotionSession {
+  id: number
+  name: string
+  startTime?: string
+  endTime?: string
+  productCount?: number
+}
+
+export function listFlashSessions(flashPromotionId: number) {
+  return unwrap<FlashPromotionSession[]>(
+    request.get('/flashSession/selectList', { params: { flashPromotionId } })
+  )
+}
+
 export function listFlashPromotions(params: { keyword?: string; pageNum: number; pageSize: number }) {
   return unwrap<PageResult<FlashPromotion>>(request.get('/flash/list', { params }))
 }

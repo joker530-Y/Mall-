@@ -1,4 +1,5 @@
 version: '3'
+# 与 docker-compose-env.yml 联用时，在 document/docker 目录创建 .env（可参考项目根目录 .env.example）
 services:
   mall-admin:
     image: mall/mall-admin:1.0-SNAPSHOT
@@ -9,9 +10,26 @@ services:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
     environment:
-      - 'TZ="Asia/Shanghai"'
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: prod
+      MALL_DB_URL: jdbc:mysql://db:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+      MALL_DB_USERNAME: ${MALL_DB_USERNAME}
+      MALL_DB_PASSWORD: ${MALL_DB_PASSWORD}
+      MALL_ADMIN_JWT_SECRET: ${MALL_ADMIN_JWT_SECRET}
+      DRUID_USERNAME: ${DRUID_USERNAME:-admin}
+      DRUID_PASSWORD: ${DRUID_PASSWORD:-admin}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_BUCKET: ${MINIO_BUCKET:-mall}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      LOGSTASH_HOST: logstash
     external_links:
-      - mysql:db #可以用db这个域名访问mysql服务
+      - mysql:db
+      - redis:redis
+      - minio:minio
   mall-search:
     image: mall/mall-search:1.0-SNAPSHOT
     container_name: mall-search
@@ -21,10 +39,18 @@ services:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
     environment:
-      - 'TZ="Asia/Shanghai"'
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: prod
+      MALL_DB_URL: jdbc:mysql://db:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+      MALL_DB_USERNAME: ${MALL_DB_USERNAME}
+      MALL_DB_PASSWORD: ${MALL_DB_PASSWORD}
+      DRUID_USERNAME: ${DRUID_USERNAME:-admin}
+      DRUID_PASSWORD: ${DRUID_PASSWORD:-admin}
+      ELASTICSEARCH_URIS: http://es:9200
+      LOGSTASH_HOST: logstash
     external_links:
-      - elasticsearch:es #可以用es这个域名访问elasticsearch服务
-      - mysql:db #可以用db这个域名访问mysql服务
+      - elasticsearch:es
+      - mysql:db
   mall-portal:
     image: mall/mall-portal:1.0-SNAPSHOT
     container_name: mall-portal
@@ -34,9 +60,34 @@ services:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime
     environment:
-      - 'TZ="Asia/Shanghai"'
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: prod
+      MALL_DB_URL: jdbc:mysql://db:3306/mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+      MALL_DB_USERNAME: ${MALL_DB_USERNAME}
+      MALL_DB_PASSWORD: ${MALL_DB_PASSWORD}
+      MALL_PORTAL_JWT_SECRET: ${MALL_PORTAL_JWT_SECRET}
+      DRUID_USERNAME: ${DRUID_USERNAME:-admin}
+      DRUID_PASSWORD: ${DRUID_PASSWORD:-admin}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      RABBITMQ_HOST: rabbit
+      RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: /mall
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DATABASE: mall-port
+      LOGSTASH_HOST: logstash
+      ALIPAY_GATEWAY_URL: ${ALIPAY_GATEWAY_URL:-}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
+      ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
+      ALIPAY_RETURN_URL: ${ALIPAY_RETURN_URL:-}
+      ALIPAY_NOTIFY_URL: ${ALIPAY_NOTIFY_URL:-}
     external_links:
-      - redis:redis #可以用redis这个域名访问redis服务
-      - mongo:mongo #可以用mongo这个域名访问mongo服务
-      - mysql:db #可以用db这个域名访问mysql服务
-      - rabbitmq:rabbit #可以用rabbit这个域名访问rabbitmq服务
+      - redis:redis
+      - mongo:mongo
+      - mysql:db
+      - rabbitmq:rabbit

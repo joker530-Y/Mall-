@@ -2,6 +2,7 @@ package com.macro.mall.portal.controller;
 
 import com.macro.mall.common.api.CommonPage;
 import com.macro.mall.common.api.CommonResult;
+import com.macro.mall.portal.domain.ConfirmOrderParam;
 import com.macro.mall.portal.domain.ConfirmOrderResult;
 import com.macro.mall.portal.domain.OmsOrderDetail;
 import com.macro.mall.portal.domain.OrderParam;
@@ -15,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,16 +32,17 @@ public class OmsPortalOrderController {
     @Operation(summary = "根据购物车信息生成确认单")
     @RequestMapping(value = "/generateConfirmOrder", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult<ConfirmOrderResult> generateConfirmOrder(@RequestBody List<Long> cartIds) {
-        ConfirmOrderResult confirmOrderResult = portalOrderService.generateConfirmOrder(cartIds);
+    public CommonResult<ConfirmOrderResult> generateConfirmOrder(@RequestBody ConfirmOrderParam param) {
+        ConfirmOrderResult confirmOrderResult = portalOrderService.generateConfirmOrder(param);
         return CommonResult.success(confirmOrderResult);
     }
 
     @Operation(summary = "根据购物车信息生成订单")
     @RequestMapping(value = "/generateOrder", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult generateOrder(@RequestBody OrderParam orderParam) {
-        Map<String, Object> result = portalOrderService.generateOrder(orderParam);
+    public CommonResult generateOrder(@RequestBody OrderParam orderParam,
+                                      @RequestHeader(value = "X-Request-Id", required = false) String requestId) {
+        Map<String, Object> result = portalOrderService.generateOrder(orderParam, requestId);
         return CommonResult.success(result, "下单成功");
     }
 
@@ -55,22 +56,6 @@ public class OmsPortalOrderController {
             return CommonResult.success(count, "订单已支付");
         }
         return CommonResult.success(count, "支付成功");
-    }
-
-    @Operation(summary = "自动取消超时订单")
-    @RequestMapping(value = "/cancelTimeOutOrder", method = RequestMethod.POST)
-    @ResponseBody
-    public CommonResult cancelTimeOutOrder() {
-        portalOrderService.cancelTimeOutOrder();
-        return CommonResult.success(null);
-    }
-
-    @Operation(summary = "取消单个超时订单")
-    @RequestMapping(value = "/cancelOrder", method = RequestMethod.POST)
-    @ResponseBody
-    public CommonResult cancelOrder(Long orderId) {
-        portalOrderService.sendDelayMessageCancelOrder(orderId);
-        return CommonResult.success(null);
     }
 
     @Operation(summary = "按状态分页获取用户订单列表")
