@@ -45,11 +45,15 @@ public class OmsPortalOrderController {
         return CommonResult.success(result, "下单成功");
     }
 
-    @Operation(summary = "用户支付成功的回调")
-    @RequestMapping(value = "/paySuccess", method = RequestMethod.POST)
+    @Operation(summary = "模拟支付（仅支付自己的待付款订单，金额以数据库订单为准）")
+    @RequestMapping(value = "/mock-pay/{orderId}", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult paySuccess(@RequestParam Long orderId,@RequestParam Integer payType) {
-        Integer count = portalOrderService.paySuccess(orderId,payType);
+    public CommonResult mockPay(@PathVariable Long orderId,
+                                @RequestParam(required = false) Integer payType) {
+        Integer count = portalOrderService.mockPay(orderId, payType);
+        if (count != null && count == 0) {
+            return CommonResult.success(count, "订单已支付");
+        }
         return CommonResult.success(count, "支付成功");
     }
 
@@ -93,7 +97,7 @@ public class OmsPortalOrderController {
     @RequestMapping(value = "/cancelUserOrder", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult cancelUserOrder(Long orderId) {
-        portalOrderService.cancelOrder(orderId);
+        portalOrderService.cancelUserOrder(orderId);
         return CommonResult.success(null);
     }
 

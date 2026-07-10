@@ -39,7 +39,17 @@ request.interceptors.response.use(
     return response
   },
   (error) => {
-    ElMessage.error(error?.message || '网络异常')
+    const status = error?.response?.status
+    if (status === 401) {
+      const auth = useAuthStore()
+      auth.clearSession()
+      ElMessage.error('登录已失效，请重新登录')
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login')
+      }
+      return Promise.reject(error)
+    }
+    ElMessage.error(error?.response?.data?.message || error?.message || '网络异常')
     return Promise.reject(error)
   }
 )

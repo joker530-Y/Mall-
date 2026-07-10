@@ -10,6 +10,9 @@
         <el-tag effect="plain">Relation {{ relationId }}</el-tag>
       </div>
       <el-table :data="logs" v-loading="loading" height="560">
+        <template #empty>
+          <el-empty description="暂无订单日志，可先执行预热并提交秒杀请求" />
+        </template>
         <el-table-column prop="id" label="日志ID" width="92" />
         <el-table-column prop="requestId" label="请求ID" min-width="220" show-overflow-tooltip />
         <el-table-column prop="memberId" label="会员" width="100" />
@@ -38,6 +41,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { listSeckillOrderLogs, type SeckillOrderLog } from '@/api/seckill'
 import { useRelationId } from '@/composables/useRelationId'
@@ -54,6 +58,10 @@ async function load() {
     const page = await listSeckillOrderLogs({ relationId: relationId.value, ...query })
     logs.value = page.list
     total.value = page.total
+  } catch (error) {
+    logs.value = []
+    total.value = 0
+    ElMessage.error(error instanceof Error ? error.message : '加载订单日志失败')
   } finally {
     loading.value = false
   }

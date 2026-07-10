@@ -12,7 +12,7 @@ export const useAuthStore = defineStore('auth', {
     username: localStorage.getItem(USERNAME_KEY) || ''
   }),
   getters: {
-    authorization: (state) => state.token && state.tokenHead ? `${state.tokenHead} ${state.token}` : ''
+    authorization: (state) => state.token && state.tokenHead ? `${state.tokenHead.trim()} ${state.token}` : ''
   },
   actions: {
     async signIn(username: string, password: string) {
@@ -30,13 +30,16 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         // Local logout must still complete if the backend is unavailable.
       } finally {
-        this.token = ''
-        this.tokenHead = ''
-        this.username = ''
-        localStorage.removeItem(TOKEN_KEY)
-        localStorage.removeItem(TOKEN_HEAD_KEY)
-        localStorage.removeItem(USERNAME_KEY)
+        this.clearSession()
       }
+    },
+    clearSession() {
+      this.token = ''
+      this.tokenHead = ''
+      this.username = ''
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(TOKEN_HEAD_KEY)
+      localStorage.removeItem(USERNAME_KEY)
     }
   }
 })

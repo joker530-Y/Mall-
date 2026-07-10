@@ -2,7 +2,7 @@ spring:
   application:
     name: mall-portal
   profiles:
-    active: dev #默认为开发环境
+    active: dev
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -13,47 +13,41 @@ mybatis:
     - classpath*:com/**/mapper/*.xml
 
 jwt:
-  tokenHeader: Authorization #JWT存储的请求头
-  secret: mall-portal-secret #JWT加解密使用的密钥
-  expiration: 604800 #JWT的超期限时间(60*60*24*7)
-  tokenHead: 'Bearer '  #JWT负载中拿到开头
+  tokenHeader: Authorization
+  secret: ${MALL_PORTAL_JWT_SECRET}
+  expiration: 604800
+  tokenHead: 'Bearer '
 
 secure:
   ignored:
-    urls: #安全路径白名单
+    urls:
       - /swagger-ui/
-      - /v3/api-docs/*
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /v3/api-docs/**
       - /*/*.html
       - /*/*.js
       - /*/*.css
       - /*/*.png
       - /favicon.ico
-      - /actuator/**
-      - /druid/**
       - /sso/**
       - /home/**
       - /product/**
       - /brand/**
-      - /alipay/**
+      - /alipay/notify
 
 springdoc:
   swagger-ui:
-    # 修改Swagger UI路径
     path: /swagger-ui.html
-    # 开启Swagger UI界面
     enabled: true
-    # 用于配置tag和operation的展开方式，这里配置为都不展开
     doc-expansion: 'none'
   api-docs:
-    # 修改api-docs路径
     path: /v3/api-docs
-    # 开启api-docs
     enabled: true
   group-configs:
     - group: 'mall-portal'
       packages-to-scan: com.macro.mall.portal.controller
 
-# 自定义redis key
 redis:
   database: mall
   key:
@@ -61,17 +55,22 @@ redis:
     orderId: 'oms:orderId'
     member: 'ums:member'
   expire:
-    authCode: 90 # 验证码超期时间
-    common: 86400 # 24小时
-    hot-data: 300 # 首页、推荐、商品详情等热点数据缓存基础TTL
-    hot-data-random-bound: 120 # 热点缓存TTL随机抖动范围，降低同批过期
+    authCode: 90
+    common: 86400
+    hot-data: 300
+    hot-data-random-bound: 120
 
 mongo:
   insert:
-    sqlEnable: true # 用于控制是否通过数据库数据来插入mongo
+    sqlEnable: true
 
-# 消息队列定义
 mall:
+  demo:
+    registration-enabled: false
+    password-reset-enabled: false
+    auth-code: "123456"
+  payment:
+    mock-only: true
   ai:
     enabled: true
     provider: mock

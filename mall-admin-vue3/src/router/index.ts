@@ -5,6 +5,7 @@ import LayoutView from '@/views/LayoutView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import FlashPromotionView from '@/views/FlashPromotionView.vue'
 import SeckillOrdersView from '@/views/SeckillOrdersView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,7 +20,8 @@ const router = createRouter({
         { path: 'flash-promotions', name: 'flash-promotions', component: FlashPromotionView },
         { path: 'seckill-orders', name: 'seckill-orders', component: SeckillOrdersView }
       ]
-    }
+    },
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
   ]
 })
 

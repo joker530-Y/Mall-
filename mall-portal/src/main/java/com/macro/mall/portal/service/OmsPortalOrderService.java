@@ -26,10 +26,16 @@ public interface OmsPortalOrderService {
     Map<String, Object> generateOrder(OrderParam orderParam);
 
     /**
-     * 支付成功后的回调
+     * 支付成功后的回调（内部使用，需配合状态条件更新保证幂等）
      */
     @Transactional
     Integer paySuccess(Long orderId, Integer payType);
+
+    /**
+     * 模拟支付：仅允许当前会员支付自己的待付款订单，金额以数据库订单为准
+     */
+    @Transactional
+    Integer mockPay(Long orderId, Integer payType);
 
     /**
      * 自动取消超时订单
@@ -38,10 +44,16 @@ public interface OmsPortalOrderService {
     Integer cancelTimeOutOrder();
 
     /**
-     * 取消单个超时订单
+     * 取消单个超时订单（内部/MQ 调用，不校验会员归属）
      */
     @Transactional
     void cancelOrder(Long orderId);
+
+    /**
+     * 用户取消自己的待付款订单
+     */
+    @Transactional
+    void cancelUserOrder(Long orderId);
 
     /**
      * 发送延迟消息取消订单

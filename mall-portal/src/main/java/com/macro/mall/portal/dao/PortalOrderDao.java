@@ -37,4 +37,9 @@ public interface PortalOrderDao {
      */
     int releaseSkuStockLock(@Param("itemList") List<OmsOrderItem> orderItemList);
 
+    /**
+     * 条件锁定库存：仅当可用库存充足时增加 lock_stock
+     */
+    int lockSkuStock(@Param("skuId") Long skuId, @Param("quantity") Integer quantity);
+
 }

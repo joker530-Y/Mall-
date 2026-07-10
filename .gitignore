@@ -20,3 +20,9 @@ mall-admin-vue3/dist/
 
 # Local verification artifacts #
 output/
+
+# Secrets #
+.env
+.env.local
+*.pem
+*.key

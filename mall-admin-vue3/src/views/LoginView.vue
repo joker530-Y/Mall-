@@ -35,7 +35,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
-const form = reactive({ username: 'admin', password: 'macro123' })
+const form = reactive({ username: '', password: '' })
 
 const rules: FormRules = {
   username: [{ required: true, message: '请输入账号', trigger: 'blur' }],

@@ -30,7 +30,6 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 /**
  * 会员管理Service实现类
@@ -61,6 +60,12 @@ public class UmsMemberServiceImpl implements UmsMemberService {
     /** 验证码过期时间（秒） */
     @Value("${redis.expire.authCode}")
     private Long AUTH_CODE_EXPIRE_SECONDS;
+    @Value("${mall.demo.registration-enabled:false}")
+    private boolean registrationEnabled;
+    @Value("${mall.demo.password-reset-enabled:false}")
+    private boolean passwordResetEnabled;
+    @Value("${mall.demo.auth-code:123456}")
+    private String demoAuthCode;
 
     /**
      * 根据用户名获取会员信息，先从缓存获取
@@ -101,6 +106,9 @@ public class UmsMemberServiceImpl implements UmsMemberService {
      */
     @Override
     public void register(String username, String password, String telephone, String authCode) {
+        if (!registrationEnabled) {
+            Asserts.fail("注册功能已关闭，请使用演示账号登录");
+        }
         //验证验证码
         if(!verifyAuthCode(authCode,telephone)){
             Asserts.fail("验证码错误");
@@ -138,13 +146,8 @@ public class UmsMemberServiceImpl implements UmsMemberService {
      */
     @Override
     public String generateAuthCode(String telephone) {
-        StringBuilder sb = new StringBuilder();
-        Random random = new Random();
-        for(int i=0;i<6;i++){
-            sb.append(random.nextInt(10));
-        }
-        memberCacheService.setAuthCode(telephone,sb.toString());
-        return sb.toString();
+        memberCacheService.setAuthCode(telephone, demoAuthCode);
+        return demoAuthCode;
     }
 
     /**
@@ -155,6 +158,9 @@ public class UmsMemberServiceImpl implements UmsMemberService {
      */
     @Override
     public void updatePassword(String telephone, String password, String authCode) {
+        if (!passwordResetEnabled) {
+            Asserts.fail("找回密码功能已关闭");
+        }
         UmsMemberExample example = new UmsMemberExample();
         example.createCriteria().andPhoneEqualTo(telephone);
         List<UmsMember> memberList = memberMapper.selectByExample(example);

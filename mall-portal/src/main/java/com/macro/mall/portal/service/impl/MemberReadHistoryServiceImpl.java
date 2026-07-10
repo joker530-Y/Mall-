@@ -14,7 +14,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -60,13 +59,8 @@ public class MemberReadHistoryServiceImpl implements MemberReadHistoryService {
 
     @Override
     public int delete(List<String> ids) {
-        List<MemberReadHistory> deleteList = new ArrayList<>();
-        for(String id:ids){
-            MemberReadHistory memberReadHistory = new MemberReadHistory();
-            memberReadHistory.setId(id);
-            deleteList.add(memberReadHistory);
-        }
-        memberReadHistoryRepository.deleteAll(deleteList);
+        UmsMember member = memberService.getCurrentMember();
+        memberReadHistoryRepository.deleteByIdInAndMemberId(ids, member.getId());
         return ids.size();
     }
 

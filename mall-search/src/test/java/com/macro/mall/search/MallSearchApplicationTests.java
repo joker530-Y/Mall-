@@ -3,6 +3,7 @@ package com.macro.mall.search;
 import com.macro.mall.search.dao.EsProductDao;
 import com.macro.mall.search.domain.EsProduct;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootTest
+@EnabledIfEnvironmentVariable(named = "RUN_ES_TESTS", matches = "true")
 public class MallSearchApplicationTests {
     @Autowired
     private EsProductDao productDao;

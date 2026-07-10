@@ -80,3 +80,23 @@ Explain:
 - How duplicate orders are prevented: Redis limit path plus DB idempotency log.
 - How Redis and DB consistency is checked: verification script compares Redis stock, DB stock decrement, order count, and duplicate member count.
 - How cache risks are handled: local cache, Redis cache, randomized TTL, null cache, rebuild lock, and Redis failure fallback.
+
+## 7. User Order Demo
+
+Open:
+
+- `document/delivery/user-order-demo.md`
+- `document/scripts/user_order_demo.ps1`
+- `document/postman/mall-portal.postman_collection.json`
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File document/scripts/user_order_demo.ps1
+```
+
+Explain:
+
+- Login -> cart -> order -> mock pay -> order detail forms the minimum normal-order closed loop.
+- Payment is mock-only; amount always comes from DB order rows.
+- Ownership checks prevent cross-member order access during the demo.

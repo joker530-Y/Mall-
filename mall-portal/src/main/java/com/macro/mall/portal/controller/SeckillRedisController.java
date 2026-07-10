@@ -23,7 +23,7 @@ public class SeckillRedisController {
     @RequestMapping(value = "/warmup/{relationId}", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult<SeckillWarmupResult> warmup(@PathVariable Long relationId) {
-        return CommonResult.success(seckillRedisService.warmup(relationId));
+        return CommonResult.forbidden(null);
     }
 
     @Operation(summary = "Submit seckill order through Redis Lua and MQ")

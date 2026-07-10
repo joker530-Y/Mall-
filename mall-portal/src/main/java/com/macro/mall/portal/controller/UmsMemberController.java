@@ -70,12 +70,12 @@ public class UmsMemberController {
         return CommonResult.success(member);
     }
 
-    @Operation(summary = "获取验证码")
+    @Operation(summary = "获取验证码（演示模式，固定验证码）")
     @RequestMapping(value = "/getAuthCode", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult getAuthCode(@RequestParam String telephone) {
-        String authCode = memberService.generateAuthCode(telephone);
-        return CommonResult.success(authCode,"获取验证码成功");
+        memberService.generateAuthCode(telephone);
+        return CommonResult.success(null, "演示模式：请使用固定验证码 123456");
     }
 
     @Operation(summary = "会员修改密码")

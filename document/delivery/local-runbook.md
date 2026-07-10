@@ -17,6 +17,7 @@ mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS mall DEFAULT CHARACTER SET
 Get-Content .\document\sql\mall.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\seckill_baseline_schema.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\phase2_performance_indexes.sql | mysql -uroot -proot -D mall
+Get-Content .\document\sql\migrations\add_order_sn_unique_index.sql | mysql -uroot -proot -D mall
 ```
 
 If MySQL reports that an index already exists, skip that `ALTER TABLE`.

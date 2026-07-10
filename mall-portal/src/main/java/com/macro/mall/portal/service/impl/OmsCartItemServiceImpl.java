@@ -1,6 +1,7 @@
 package com.macro.mall.portal.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.mapper.OmsCartItemMapper;
 import com.macro.mall.model.OmsCartItem;
 import com.macro.mall.model.OmsCartItemExample;
@@ -126,7 +127,12 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
 
     @Override
     public int updateAttr(OmsCartItem cartItem) {
-        //删除原购物车信息
+        UmsMember currentMember = memberService.getCurrentMember();
+        OmsCartItem existing = cartItemMapper.selectByPrimaryKey(cartItem.getId());
+        if (existing == null || existing.getDeleteStatus() == 1
+                || !currentMember.getId().equals(existing.getMemberId())) {
+            Asserts.fail("购物车项不存在");
+        }
         OmsCartItem updateCart = new OmsCartItem();
         updateCart.setId(cartItem.getId());
         updateCart.setModifyDate(new Date());

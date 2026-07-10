@@ -20,4 +20,9 @@ public interface SmsCouponHistoryDao {
      * 获取指定会员优惠券列表
      */
     List<SmsCoupon> getCouponList(@Param("memberId") Long memberId, @Param("useStatus")Integer useStatus);
+
+    /**
+     * 原子扣减优惠券剩余数量
+     */
+    int decrementCouponCount(@Param("couponId") Long couponId);
 }

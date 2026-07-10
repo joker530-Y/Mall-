@@ -255,24 +255,25 @@
 			},
 			"response": []
 		},
-		{
-			"name": "订单支付成功回调",
+        {
+			"name": "模拟支付订单",
 			"request": {
 				"url": {
-					"raw": "{{portal.mall}}/order/paySuccess?orderId=12",
+					"raw": "{{portal.mall}}/order/mock-pay/{{orderId}}?payType=1",
 					"host": [
 						"{{portal.mall}}"
 					],
 					"path": [
 						"order",
-						"paySuccess"
+						"mock-pay",
+						"{{orderId}}"
 					],
 					"query": [
 						{
-							"key": "orderId",
-							"value": "12",
+							"key": "payType",
+							"value": "1",
 							"equals": true,
-							"description": ""
+							"description": "支付方式：1->模拟支付宝"
 						}
 					],
 					"variable": []
@@ -280,7 +281,7 @@
 				"method": "POST",
 				"header": [],
 				"body": {},
-				"description": ""
+				"description": "仅允许支付自己的待付款订单，金额以数据库订单为准。"
 			},
 			"response": []
 		},

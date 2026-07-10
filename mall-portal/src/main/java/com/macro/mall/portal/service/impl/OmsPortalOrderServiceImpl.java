@@ -251,17 +251,45 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
 
     @Override
     public Integer paySuccess(Long orderId, Integer payType) {
-        //修改订单支付状态
-        OmsOrder order = new OmsOrder();
-        order.setId(orderId);
-        order.setStatus(1);
-        order.setPaymentTime(new Date());
-        order.setPayType(payType);
-        orderMapper.updateByPrimaryKeySelective(order);
-        //恢复所有下单商品的锁定库存，扣减真实库存
+        OmsOrderExample example = new OmsOrderExample();
+        example.createCriteria()
+                .andIdEqualTo(orderId)
+                .andStatusEqualTo(0)
+                .andDeleteStatusEqualTo(0);
+        OmsOrder updateOrder = new OmsOrder();
+        updateOrder.setStatus(1);
+        updateOrder.setPaymentTime(new Date());
+        updateOrder.setPayType(payType);
+        int updated = orderMapper.updateByExampleSelective(updateOrder, example);
+        if (updated == 0) {
+            OmsOrder existing = orderMapper.selectByPrimaryKey(orderId);
+            if (existing != null && existing.getStatus() == 1) {
+                return 0;
+            }
+            Asserts.fail("订单状态不可支付");
+        }
         OmsOrderDetail orderDetail = portalOrderDao.getDetail(orderId);
-        int count = portalOrderDao.updateSkuStock(orderDetail.getOrderItemList());
-        return count;
+        return portalOrderDao.updateSkuStock(orderDetail.getOrderItemList());
+    }
+
+    @Override
+    public Integer mockPay(Long orderId, Integer payType) {
+        UmsMember currentMember = memberService.getCurrentMember();
+        OmsOrder order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null || order.getDeleteStatus() == 1) {
+            Asserts.fail("订单不存在");
+        }
+        if (!currentMember.getId().equals(order.getMemberId())) {
+            Asserts.fail("无权支付该订单");
+        }
+        if (order.getStatus() == 1) {
+            return 0;
+        }
+        if (order.getStatus() != 0) {
+            Asserts.fail("订单状态不可支付");
+        }
+        Integer resolvedPayType = payType != null ? payType : order.getPayType();
+        return paySuccess(orderId, resolvedPayType);
     }
 
     @Override
@@ -295,7 +323,6 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
 
     @Override
     public void cancelOrder(Long orderId) {
-        //查询未付款的取消订单
         OmsOrderExample example = new OmsOrderExample();
         example.createCriteria().andIdEqualTo(orderId).andStatusEqualTo(0).andDeleteStatusEqualTo(0);
         List<OmsOrder> cancelOrderList = orderMapper.selectByExample(example);
@@ -322,6 +349,16 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
                 memberService.updateIntegration(cancelOrder.getMemberId(), member.getIntegration() + cancelOrder.getUseIntegration());
             }
         }
+    }
+
+    @Override
+    public void cancelUserOrder(Long orderId) {
+        UmsMember member = memberService.getCurrentMember();
+        OmsOrder order = orderMapper.selectByPrimaryKey(orderId);
+        if (order == null || !member.getId().equals(order.getMemberId())) {
+            Asserts.fail("无权取消该订单");
+        }
+        cancelOrder(orderId);
     }
 
     @Override
@@ -397,7 +434,14 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
 
     @Override
     public OmsOrderDetail detail(Long orderId) {
+        UmsMember member = memberService.getCurrentMember();
         OmsOrder omsOrder = orderMapper.selectByPrimaryKey(orderId);
+        if (omsOrder == null || omsOrder.getDeleteStatus() == 1) {
+            Asserts.fail("订单不存在");
+        }
+        if (!member.getId().equals(omsOrder.getMemberId())) {
+            Asserts.fail("无权查看该订单");
+        }
         OmsOrderItemExample example = new OmsOrderItemExample();
         example.createCriteria().andOrderIdEqualTo(orderId);
         List<OmsOrderItem> orderItemList = orderItemMapper.selectByExample(example);
@@ -729,9 +773,10 @@ public class OmsPortalOrderServiceImpl implements OmsPortalOrderService {
      */
     private void lockStock(List<CartPromotionItem> cartPromotionItemList) {
         for (CartPromotionItem cartPromotionItem : cartPromotionItemList) {
-            PmsSkuStock skuStock = skuStockMapper.selectByPrimaryKey(cartPromotionItem.getProductSkuId());
-            skuStock.setLockStock(skuStock.getLockStock() + cartPromotionItem.getQuantity());
-            skuStockMapper.updateByPrimaryKeySelective(skuStock);
+            int updated = portalOrderDao.lockSkuStock(cartPromotionItem.getProductSkuId(), cartPromotionItem.getQuantity());
+            if (updated == 0) {
+                Asserts.fail("库存不足，无法下单");
+            }
         }
     }
 

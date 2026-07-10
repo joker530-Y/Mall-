@@ -7,6 +7,7 @@ import com.macro.mall.portal.service.AlipayService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -33,10 +34,16 @@ public class AlipayController {
     private AlipayConfig alipayConfig;
     @Autowired
     private AlipayService alipayService;
+    @Value("${mall.payment.mock-only:true}")
+    private boolean mockPaymentOnly;
 
     @Operation(summary = "支付宝电脑网站支付")
     @RequestMapping(value = "/pay", method = RequestMethod.GET)
     public void pay(AliPayParam aliPayParam, HttpServletResponse response) throws IOException {
+        if (mockPaymentOnly) {
+            writeMockPaymentNotice(response);
+            return;
+        }
         response.setContentType("text/html;charset=" + alipayConfig.getCharset());
         response.getWriter().write(alipayService.pay(aliPayParam));
         response.getWriter().flush();
@@ -46,6 +53,10 @@ public class AlipayController {
     @Operation(summary = "支付宝手机网站支付")
     @RequestMapping(value = "/webPay", method = RequestMethod.GET)
     public void webPay(AliPayParam aliPayParam, HttpServletResponse response) throws IOException {
+        if (mockPaymentOnly) {
+            writeMockPaymentNotice(response);
+            return;
+        }
         response.setContentType("text/html;charset=" + alipayConfig.getCharset());
         response.getWriter().write(alipayService.webPay(aliPayParam));
         response.getWriter().flush();
@@ -67,6 +78,16 @@ public class AlipayController {
     @RequestMapping(value = "/query", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult<String> query(String outTradeNo, String tradeNo){
+        if (mockPaymentOnly) {
+            return CommonResult.failed("本项目使用模拟支付，请调用 POST /order/mock-pay/{orderId}");
+        }
         return CommonResult.success(alipayService.query(outTradeNo,tradeNo));
+    }
+
+    private void writeMockPaymentNotice(HttpServletResponse response) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().write("本项目使用模拟支付，请调用 POST /order/mock-pay/{orderId}");
+        response.getWriter().flush();
+        response.getWriter().close();
     }
 }

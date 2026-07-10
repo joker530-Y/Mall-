@@ -133,6 +133,7 @@ public class SeckillRedisServiceImpl implements SeckillRedisService {
                 seckillOrderSender.send(message);
             } catch (Exception e) {
                 compensateRedis(message, "MQ_SEND_FAILED");
+                stringRedisTemplate.delete(resultKey(message.getRelationId(), message.getMemberId()));
                 Asserts.fail("send seckill order message failed");
             }
             return submitResult(requestId, relation.getId(), "PROCESSING", luaResult.intValue());
