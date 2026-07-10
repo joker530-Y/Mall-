@@ -4,6 +4,14 @@
 
 > **项目边界**：仅用于学习与简历展示，不接入真实支付、不提供生产部署 SLA，也不声称可直接商用。
 
+<p align="center">
+  <img src="document/assets/architecture.png" alt="系统架构图" width="720" />
+</p>
+
+<p align="center">
+  <img src="document/assets/admin-console.png" alt="秒杀运营控制台" width="720" />
+</p>
+
 ## 核心亮点
 
 - **秒杀链路**：Redis Lua 原子预扣库存 + 限购 + 重复下单校验，RabbitMQ 异步落库，脚本验证零超卖。
@@ -50,10 +58,10 @@ mall-search     Elasticsearch 商品搜索（可选）
 
 ## 演示截图
 
-将以下截图放入 `document/assets/` 后可在 GitHub 置顶展示：
+架构图与后台控制台见 README 顶部，源文件位于 `document/assets/`：
 
-- `architecture.png` — 架构图（可由上方 Mermaid 导出）
-- `admin-console.png` — 后台秒杀看板截图
+- `architecture.png` — 系统架构图
+- `admin-console.png` — 秒杀运营控制台
 
 ## 本地启动
 
