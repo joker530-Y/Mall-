@@ -46,6 +46,14 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    DirectExchange seckillDlxDirect() {
+        return ExchangeBuilder
+                .directExchange(QueueEnum.QUEUE_SECKILL_ORDER_DLQ.getExchange())
+                .durable(true)
+                .build();
+    }
+
+    @Bean
     public Queue orderQueue() {
         return QueueBuilder
                 .durable(QueueEnum.QUEUE_ORDER_CANCEL.getName())
@@ -65,6 +73,15 @@ public class RabbitMqConfig {
     public Queue seckillOrderQueue() {
         return QueueBuilder
                 .durable(QueueEnum.QUEUE_SECKILL_ORDER.getName())
+                .withArgument("x-dead-letter-exchange", QueueEnum.QUEUE_SECKILL_ORDER_DLQ.getExchange())
+                .withArgument("x-dead-letter-routing-key", QueueEnum.QUEUE_SECKILL_ORDER_DLQ.getRouteKey())
+                .build();
+    }
+
+    @Bean
+    public Queue seckillOrderDlq() {
+        return QueueBuilder
+                .durable(QueueEnum.QUEUE_SECKILL_ORDER_DLQ.getName())
                 .build();
     }
 
@@ -90,5 +107,13 @@ public class RabbitMqConfig {
                 .bind(seckillOrderQueue)
                 .to(seckillDirect)
                 .with(QueueEnum.QUEUE_SECKILL_ORDER.getRouteKey());
+    }
+
+    @Bean
+    Binding seckillOrderDlqBinding(DirectExchange seckillDlxDirect, Queue seckillOrderDlq) {
+        return BindingBuilder
+                .bind(seckillOrderDlq)
+                .to(seckillDlxDirect)
+                .with(QueueEnum.QUEUE_SECKILL_ORDER_DLQ.getRouteKey());
     }
 }

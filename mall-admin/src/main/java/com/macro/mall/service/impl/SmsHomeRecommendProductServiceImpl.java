@@ -6,6 +6,7 @@ import com.macro.mall.mapper.SmsHomeRecommendProductMapper;
 import com.macro.mall.model.SmsHomeRecommendProduct;
 import com.macro.mall.model.SmsHomeRecommendProductExample;
 import com.macro.mall.service.SmsHomeRecommendProductService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,8 @@ import java.util.List;
 public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProductService {
     @Autowired
     private SmsHomeRecommendProductMapper recommendProductMapper;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
     @Override
     public int create(List<SmsHomeRecommendProduct> homeRecommendProductList) {
         for (SmsHomeRecommendProduct recommendProduct : homeRecommendProductList) {
@@ -26,6 +29,7 @@ public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProdu
             recommendProduct.setSort(0);
             recommendProductMapper.insert(recommendProduct);
         }
+        portalHotCacheInvalidator.invalidateHomeCatalog();
         return homeRecommendProductList.size();
     }
 
@@ -34,14 +38,18 @@ public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProdu
         SmsHomeRecommendProduct recommendProduct = new SmsHomeRecommendProduct();
         recommendProduct.setId(id);
         recommendProduct.setSort(sort);
-        return recommendProductMapper.updateByPrimaryKeySelective(recommendProduct);
+        int count = recommendProductMapper.updateByPrimaryKeySelective(recommendProduct);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(List<Long> ids) {
         SmsHomeRecommendProductExample example = new SmsHomeRecommendProductExample();
         example.createCriteria().andIdIn(ids);
-        return recommendProductMapper.deleteByExample(example);
+        int count = recommendProductMapper.deleteByExample(example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -50,7 +58,9 @@ public class SmsHomeRecommendProductServiceImpl implements SmsHomeRecommendProdu
         example.createCriteria().andIdIn(ids);
         SmsHomeRecommendProduct record = new SmsHomeRecommendProduct();
         record.setRecommendStatus(recommendStatus);
-        return recommendProductMapper.updateByExampleSelective(record,example);
+        int count = recommendProductMapper.updateByExampleSelective(record,example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

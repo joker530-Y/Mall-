@@ -6,6 +6,7 @@ import com.macro.mall.mapper.SmsHomeBrandMapper;
 import com.macro.mall.model.SmsHomeBrand;
 import com.macro.mall.model.SmsHomeBrandExample;
 import com.macro.mall.service.SmsHomeBrandService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,8 @@ import java.util.List;
 public class SmsHomeBrandServiceImpl implements SmsHomeBrandService {
     @Autowired
     private SmsHomeBrandMapper homeBrandMapper;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
     @Override
     public int create(List<SmsHomeBrand> homeBrandList) {
         for (SmsHomeBrand smsHomeBrand : homeBrandList) {
@@ -26,6 +29,7 @@ public class SmsHomeBrandServiceImpl implements SmsHomeBrandService {
             smsHomeBrand.setSort(0);
             homeBrandMapper.insert(smsHomeBrand);
         }
+        portalHotCacheInvalidator.invalidateHomeCatalog();
         return homeBrandList.size();
     }
 
@@ -34,14 +38,18 @@ public class SmsHomeBrandServiceImpl implements SmsHomeBrandService {
         SmsHomeBrand homeBrand = new SmsHomeBrand();
         homeBrand.setId(id);
         homeBrand.setSort(sort);
-        return homeBrandMapper.updateByPrimaryKeySelective(homeBrand);
+        int count = homeBrandMapper.updateByPrimaryKeySelective(homeBrand);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(List<Long> ids) {
         SmsHomeBrandExample example = new SmsHomeBrandExample();
         example.createCriteria().andIdIn(ids);
-        return homeBrandMapper.deleteByExample(example);
+        int count = homeBrandMapper.deleteByExample(example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -50,7 +58,9 @@ public class SmsHomeBrandServiceImpl implements SmsHomeBrandService {
         example.createCriteria().andIdIn(ids);
         SmsHomeBrand record = new SmsHomeBrand();
         record.setRecommendStatus(recommendStatus);
-        return homeBrandMapper.updateByExampleSelective(record,example);
+        int count = homeBrandMapper.updateByExampleSelective(record,example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

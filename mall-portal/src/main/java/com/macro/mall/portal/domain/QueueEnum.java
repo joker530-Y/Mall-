@@ -16,7 +16,11 @@ public enum QueueEnum {
      * 消息通知ttl队列
      */
     QUEUE_TTL_ORDER_CANCEL("mall.order.direct.ttl", "mall.order.cancel.ttl", "mall.order.cancel.ttl"),
-    QUEUE_SECKILL_ORDER("mall.seckill.direct", "mall.seckill.order", "mall.seckill.order");
+    QUEUE_SECKILL_ORDER("mall.seckill.direct", "mall.seckill.order", "mall.seckill.order"),
+    /**
+     * 秒杀订单死信队列（消费失败后进入，便于排查与重放）
+     */
+    QUEUE_SECKILL_ORDER_DLQ("mall.seckill.direct.dlx", "mall.seckill.order.dlq", "mall.seckill.order.dlq");
 
     /**
      * 交换名称

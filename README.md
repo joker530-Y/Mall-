@@ -5,11 +5,11 @@
 > **项目边界**：仅用于学习与简历展示，不接入真实支付、不提供生产部署 SLA，也不声称可直接商用。
 
 <p align="center">
-  <img src="document/assets/architecture.png" alt="系统架构图" width="720" />
+  <img src="document/assets/architecture.svg" alt="系统架构图" width="720" />
 </p>
 
 <p align="center">
-  <img src="document/assets/admin-console.png" alt="秒杀运营控制台" width="720" />
+  <img src="document/assets/admin-console.svg" alt="秒杀运营控制台" width="720" />
 </p>
 
 ## 核心亮点
@@ -63,8 +63,8 @@ mall-search     Elasticsearch 商品搜索（可选）
 
 架构图与后台控制台见 README 顶部，源文件位于 `document/assets/`：
 
-- `architecture.png` — 系统架构图
-- `admin-console.png` — 秒杀运营控制台
+- `architecture.svg` — 系统架构图
+- `admin-console.svg` — 秒杀运营控制台示意
 
 ## 本地启动
 
@@ -174,7 +174,7 @@ powershell -ExecutionPolicy Bypass -File document/scripts/run_seckill_phase1c.ps
 
 ## 已知局限
 
-- **缓存失效**：商品编辑后需主动失效热点缓存，当前为 TTL 兜底。
+- **本地 Caffeine**：后台写操作会删除 Redis 热点 key；门户本地缓存最长约 30s 过期。
 - **支付**：仅模拟支付，支付宝沙箱入口在 `mall.payment.mock-only=true` 时禁用。
 - **搜索写接口**：`mall-search` 的导入/增删需请求头 `X-Manage-Token`（环境变量 `MALL_SEARCH_MANAGE_TOKEN`），未接入后台 JWT。
 
@@ -185,6 +185,7 @@ powershell -ExecutionPolicy Bypass -File document/scripts/run_seckill_phase1c.ps
 | 文档 | 说明 |
 |------|------|
 | `document/delivery/local-runbook.md` | 本地运行手册 |
+| `document/delivery/seckill-dlq-runbook.md` | 秒杀 DLQ 排查与重放 |
 | `document/delivery/demo-script.md` | 秒杀演示脚本 |
 | `document/delivery/user-order-demo.md` | 用户下单演示 |
 | `document/architecture/optimization-architecture.md` | 优化架构 |

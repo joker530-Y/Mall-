@@ -150,3 +150,7 @@ PowerShell calls without an `Origin` header may still return 200 while the brows
 ### Product detail: add-to-cart / buy buttons stay disabled
 
 SKU specs are stored in `pms_sku_stock.sp_data` JSON. The portal UI must parse `spData` to build color/capacity options and select a stocked SKU. If buttons stay disabled, check that the product has SKUs with stock and that the frontend build includes the `spData` matching logic (`mall-portal-vue3/src/utils/sku.ts`).
+
+### Portal fails to start after seckill DLQ upgrade
+
+If RabbitMQ already has `mall.seckill.order` without dead-letter arguments, delete that queue in Management UI (vhost `/mall`) and restart `mall-portal`. See `document/delivery/seckill-dlq-runbook.md`.

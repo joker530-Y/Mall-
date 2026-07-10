@@ -6,6 +6,7 @@ import com.macro.mall.mapper.SmsHomeNewProductMapper;
 import com.macro.mall.model.SmsHomeNewProduct;
 import com.macro.mall.model.SmsHomeNewProductExample;
 import com.macro.mall.service.SmsHomeNewProductService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,8 @@ import java.util.List;
 public class SmsHomeNewProductServiceImpl implements SmsHomeNewProductService {
     @Autowired
     private SmsHomeNewProductMapper homeNewProductMapper;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
     @Override
     public int create(List<SmsHomeNewProduct> homeNewProductList) {
         for (SmsHomeNewProduct SmsHomeNewProduct : homeNewProductList) {
@@ -26,6 +29,7 @@ public class SmsHomeNewProductServiceImpl implements SmsHomeNewProductService {
             SmsHomeNewProduct.setSort(0);
             homeNewProductMapper.insert(SmsHomeNewProduct);
         }
+        portalHotCacheInvalidator.invalidateHomeCatalog();
         return homeNewProductList.size();
     }
 
@@ -34,14 +38,18 @@ public class SmsHomeNewProductServiceImpl implements SmsHomeNewProductService {
         SmsHomeNewProduct homeNewProduct = new SmsHomeNewProduct();
         homeNewProduct.setId(id);
         homeNewProduct.setSort(sort);
-        return homeNewProductMapper.updateByPrimaryKeySelective(homeNewProduct);
+        int count = homeNewProductMapper.updateByPrimaryKeySelective(homeNewProduct);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(List<Long> ids) {
         SmsHomeNewProductExample example = new SmsHomeNewProductExample();
         example.createCriteria().andIdIn(ids);
-        return homeNewProductMapper.deleteByExample(example);
+        int count = homeNewProductMapper.deleteByExample(example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -50,7 +58,9 @@ public class SmsHomeNewProductServiceImpl implements SmsHomeNewProductService {
         example.createCriteria().andIdIn(ids);
         SmsHomeNewProduct record = new SmsHomeNewProduct();
         record.setRecommendStatus(recommendStatus);
-        return homeNewProductMapper.updateByExampleSelective(record,example);
+        int count = homeNewProductMapper.updateByExampleSelective(record,example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

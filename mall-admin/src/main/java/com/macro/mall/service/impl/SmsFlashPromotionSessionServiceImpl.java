@@ -6,6 +6,7 @@ import com.macro.mall.model.SmsFlashPromotionSession;
 import com.macro.mall.model.SmsFlashPromotionSessionExample;
 import com.macro.mall.service.SmsFlashPromotionProductRelationService;
 import com.macro.mall.service.SmsFlashPromotionSessionService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,17 +25,23 @@ public class SmsFlashPromotionSessionServiceImpl implements SmsFlashPromotionSes
     private SmsFlashPromotionSessionMapper promotionSessionMapper;
     @Autowired
     private SmsFlashPromotionProductRelationService relationService;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
 
     @Override
     public int create(SmsFlashPromotionSession promotionSession) {
         promotionSession.setCreateTime(new Date());
-        return promotionSessionMapper.insert(promotionSession);
+        int count = promotionSessionMapper.insert(promotionSession);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int update(Long id, SmsFlashPromotionSession promotionSession) {
         promotionSession.setId(id);
-        return promotionSessionMapper.updateByPrimaryKey(promotionSession);
+        int count = promotionSessionMapper.updateByPrimaryKey(promotionSession);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -42,12 +49,16 @@ public class SmsFlashPromotionSessionServiceImpl implements SmsFlashPromotionSes
         SmsFlashPromotionSession promotionSession = new SmsFlashPromotionSession();
         promotionSession.setId(id);
         promotionSession.setStatus(status);
-        return promotionSessionMapper.updateByPrimaryKeySelective(promotionSession);
+        int count = promotionSessionMapper.updateByPrimaryKeySelective(promotionSession);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(Long id) {
-        return promotionSessionMapper.deleteByPrimaryKey(id);
+        int count = promotionSessionMapper.deleteByPrimaryKey(id);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

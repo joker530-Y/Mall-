@@ -10,6 +10,7 @@ import com.macro.mall.dto.PmsProductResult;
 import com.macro.mall.mapper.*;
 import com.macro.mall.model.*;
 import com.macro.mall.service.PmsProductService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,6 +83,8 @@ public class PmsProductServiceImpl implements PmsProductService {
     /** 商品审核记录Dao */
     @Autowired
     private PmsProductVertifyRecordDao productVertifyRecordDao;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
 
     /**
      * 创建商品，同时处理会员价格、阶梯价格、满减价格、SKU、属性值、专题关联、优选关联
@@ -114,6 +117,7 @@ public class PmsProductServiceImpl implements PmsProductService {
         //关联优选
         relateAndInsertList(prefrenceAreaProductRelationDao, productParam.getPrefrenceAreaProductRelationList(), productId);
         count = 1;
+        portalHotCacheInvalidator.invalidateProduct(productId);
         return count;
     }
 
@@ -191,6 +195,7 @@ public class PmsProductServiceImpl implements PmsProductService {
         prefrenceAreaProductRelationMapper.deleteByExample(prefrenceAreaExample);
         relateAndInsertList(prefrenceAreaProductRelationDao, productParam.getPrefrenceAreaProductRelationList(), id);
         count = 1;
+        portalHotCacheInvalidator.invalidateProduct(id);
         return count;
     }
 
@@ -288,6 +293,7 @@ public class PmsProductServiceImpl implements PmsProductService {
             list.add(record);
         }
         productVertifyRecordDao.insertList(list);
+        portalHotCacheInvalidator.invalidateProducts(ids);
         return count;
     }
 
@@ -297,7 +303,9 @@ public class PmsProductServiceImpl implements PmsProductService {
         record.setPublishStatus(publishStatus);
         PmsProductExample example = new PmsProductExample();
         example.createCriteria().andIdIn(ids);
-        return productMapper.updateByExampleSelective(record, example);
+        int count = productMapper.updateByExampleSelective(record, example);
+        portalHotCacheInvalidator.invalidateProducts(ids);
+        return count;
     }
 
     @Override
@@ -306,7 +314,9 @@ public class PmsProductServiceImpl implements PmsProductService {
         record.setRecommandStatus(recommendStatus);
         PmsProductExample example = new PmsProductExample();
         example.createCriteria().andIdIn(ids);
-        return productMapper.updateByExampleSelective(record, example);
+        int count = productMapper.updateByExampleSelective(record, example);
+        portalHotCacheInvalidator.invalidateProducts(ids);
+        return count;
     }
 
     @Override
@@ -315,7 +325,9 @@ public class PmsProductServiceImpl implements PmsProductService {
         record.setNewStatus(newStatus);
         PmsProductExample example = new PmsProductExample();
         example.createCriteria().andIdIn(ids);
-        return productMapper.updateByExampleSelective(record, example);
+        int count = productMapper.updateByExampleSelective(record, example);
+        portalHotCacheInvalidator.invalidateProducts(ids);
+        return count;
     }
 
     @Override
@@ -324,7 +336,9 @@ public class PmsProductServiceImpl implements PmsProductService {
         record.setDeleteStatus(deleteStatus);
         PmsProductExample example = new PmsProductExample();
         example.createCriteria().andIdIn(ids);
-        return productMapper.updateByExampleSelective(record, example);
+        int count = productMapper.updateByExampleSelective(record, example);
+        portalHotCacheInvalidator.invalidateProducts(ids);
+        return count;
     }
 
     @Override

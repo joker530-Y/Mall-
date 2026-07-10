@@ -2,8 +2,12 @@ package com.macro.mall.common.service.impl;
 
 import com.macro.mall.common.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.util.StringUtils;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +45,31 @@ public class RedisServiceImpl implements RedisService {
     @Override
     public Long del(List<String> keys) {
         return redisTemplate.delete(keys);
+    }
+
+    @Override
+    public Long delByPattern(String pattern) {
+        if (!StringUtils.hasText(pattern)) {
+            return 0L;
+        }
+        long deleted = 0L;
+        Set<String> batch = new HashSet<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                batch.add(cursor.next());
+                if (batch.size() >= 200) {
+                    Long count = redisTemplate.delete(batch);
+                    deleted += count == null ? 0L : count;
+                    batch.clear();
+                }
+            }
+        }
+        if (!batch.isEmpty()) {
+            Long count = redisTemplate.delete(batch);
+            deleted += count == null ? 0L : count;
+        }
+        return deleted;
     }
 
     @Override

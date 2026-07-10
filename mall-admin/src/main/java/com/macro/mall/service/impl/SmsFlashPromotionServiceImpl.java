@@ -6,6 +6,7 @@ import com.macro.mall.mapper.SmsFlashPromotionMapper;
 import com.macro.mall.model.SmsFlashPromotion;
 import com.macro.mall.model.SmsFlashPromotionExample;
 import com.macro.mall.service.SmsFlashPromotionService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,22 +21,30 @@ import java.util.List;
 public class SmsFlashPromotionServiceImpl implements SmsFlashPromotionService {
     @Autowired
     private SmsFlashPromotionMapper flashPromotionMapper;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
 
     @Override
     public int create(SmsFlashPromotion flashPromotion) {
         flashPromotion.setCreateTime(new Date());
-        return flashPromotionMapper.insert(flashPromotion);
+        int count = flashPromotionMapper.insert(flashPromotion);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int update(Long id, SmsFlashPromotion flashPromotion) {
         flashPromotion.setId(id);
-        return flashPromotionMapper.updateByPrimaryKey(flashPromotion);
+        int count = flashPromotionMapper.updateByPrimaryKey(flashPromotion);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(Long id) {
-        return flashPromotionMapper.deleteByPrimaryKey(id);
+        int count = flashPromotionMapper.deleteByPrimaryKey(id);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -43,7 +52,9 @@ public class SmsFlashPromotionServiceImpl implements SmsFlashPromotionService {
         SmsFlashPromotion flashPromotion = new SmsFlashPromotion();
         flashPromotion.setId(id);
         flashPromotion.setStatus(status);
-        return flashPromotionMapper.updateByPrimaryKeySelective(flashPromotion);
+        int count = flashPromotionMapper.updateByPrimaryKeySelective(flashPromotion);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

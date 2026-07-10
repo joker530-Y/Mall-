@@ -36,6 +36,11 @@ public interface RedisService {
     Long del(List<String> keys);
 
     /**
+     * 按 pattern 扫描并删除（使用 SCAN，避免 KEYS 阻塞）
+     */
+    Long delByPattern(String pattern);
+
+    /**
      * 设置过期时间
      */
     Boolean expire(String key, long time);

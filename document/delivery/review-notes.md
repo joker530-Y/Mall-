@@ -16,8 +16,10 @@
 - `duplicateOrderCount = 0` proves member-level duplicate protection.
 - `initialStock - redisStock = successOrderCount` checks Redis admission consistency.
 - `dbStockDecrement = successOrderCount` checks DB persistence consistency.
+- Product detail / homepage hot caches are invalidated from admin write paths by deleting shared Redis keys (`{redis.database}:hot:...`). Portal local Caffeine still expires within ~30s.
 - RabbitMQ consumer logic must remain idempotent because delivery can be retried.
 - Seckill publisher uses correlated confirms + mandatory returns; send failure triggers Redis compensation in `SeckillRedisServiceImpl`.
+- Seckill consume failures are marked in Redis and rejected to `mall.seckill.order.dlq` (see `document/delivery/seckill-dlq-runbook.md`).
 
 ## Tradeoffs
 
@@ -29,8 +31,7 @@
 
 ## Follow-up Hardening
 
-- Add explicit cache eviction from admin product/recommendation/flash-promotion update APIs.
-- Add a dead-letter retry and replay runbook for failed seckill order messages.
+- Optionally publish Redis pub/sub so portal instances evict local Caffeine immediately (today Redis delete + 30s local TTL).
 - Optionally reuse admin JWT for `mall-search` write APIs (currently `X-Manage-Token` / `MALL_SEARCH_MANAGE_TOKEN`).
 - Add dashboard screenshots after running the benchmark on a fixed local machine.
 - Add CI smoke checks for compile and delivery-file presence.

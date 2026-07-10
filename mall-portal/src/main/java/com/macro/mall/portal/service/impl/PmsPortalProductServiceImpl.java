@@ -9,6 +9,7 @@ import com.macro.mall.mapper.PmsProductAttributeValueMapper;
 import com.macro.mall.mapper.PmsProductCategoryMapper;
 import com.macro.mall.mapper.PmsProductFullReductionMapper;
 import com.macro.mall.mapper.PmsProductLadderMapper;
+import com.macro.mall.common.constant.PortalHotCacheKeys;
 import com.macro.mall.mapper.PmsProductMapper;
 import com.macro.mall.mapper.PmsSkuStockMapper;
 import com.macro.mall.model.PmsBrand;
@@ -40,8 +41,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class PmsPortalProductServiceImpl implements PmsPortalProductService {
-    private static final String PRODUCT_DETAIL_CACHE_KEY = "product:detail:";
-    private static final String PRODUCT_CATEGORY_TREE_CACHE_KEY = "product:category-tree";
 
     @Autowired
     private PmsProductMapper productMapper;
@@ -94,7 +93,7 @@ public class PmsPortalProductServiceImpl implements PmsPortalProductService {
 
     @Override
     public List<PmsProductCategoryNode> categoryTreeList() {
-        return cacheCategoryTree(PRODUCT_CATEGORY_TREE_CACHE_KEY, this::loadCategoryTreeList);
+        return cacheCategoryTree(PortalHotCacheKeys.PRODUCT_CATEGORY_TREE, this::loadCategoryTreeList);
     }
 
     private List<PmsProductCategoryNode> loadCategoryTreeList() {
@@ -108,7 +107,7 @@ public class PmsPortalProductServiceImpl implements PmsPortalProductService {
 
     @Override
     public PmsPortalProductDetail detail(Long id) {
-        return hotDataCache.get(PRODUCT_DETAIL_CACHE_KEY + id, PmsPortalProductDetail.class, () -> loadDetail(id));
+        return hotDataCache.get(PortalHotCacheKeys.productDetail(id), PmsPortalProductDetail.class, () -> loadDetail(id));
     }
 
     private PmsPortalProductDetail loadDetail(Long id) {

@@ -6,6 +6,7 @@ import com.macro.mall.mapper.SmsHomeAdvertiseMapper;
 import com.macro.mall.model.SmsHomeAdvertise;
 import com.macro.mall.model.SmsHomeAdvertiseExample;
 import com.macro.mall.service.SmsHomeAdvertiseService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,19 +23,25 @@ import java.util.List;
 public class SmsHomeAdvertiseServiceImpl implements SmsHomeAdvertiseService {
     @Autowired
     private SmsHomeAdvertiseMapper advertiseMapper;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
 
     @Override
     public int create(SmsHomeAdvertise advertise) {
         advertise.setClickCount(0);
         advertise.setOrderCount(0);
-        return advertiseMapper.insert(advertise);
+        int count = advertiseMapper.insert(advertise);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(List<Long> ids) {
         SmsHomeAdvertiseExample example = new SmsHomeAdvertiseExample();
         example.createCriteria().andIdIn(ids);
-        return advertiseMapper.deleteByExample(example);
+        int count = advertiseMapper.deleteByExample(example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -42,7 +49,9 @@ public class SmsHomeAdvertiseServiceImpl implements SmsHomeAdvertiseService {
         SmsHomeAdvertise record = new SmsHomeAdvertise();
         record.setId(id);
         record.setStatus(status);
-        return advertiseMapper.updateByPrimaryKeySelective(record);
+        int count = advertiseMapper.updateByPrimaryKeySelective(record);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -53,7 +62,9 @@ public class SmsHomeAdvertiseServiceImpl implements SmsHomeAdvertiseService {
     @Override
     public int update(Long id, SmsHomeAdvertise advertise) {
         advertise.setId(id);
-        return advertiseMapper.updateByPrimaryKeySelective(advertise);
+        int count = advertiseMapper.updateByPrimaryKeySelective(advertise);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

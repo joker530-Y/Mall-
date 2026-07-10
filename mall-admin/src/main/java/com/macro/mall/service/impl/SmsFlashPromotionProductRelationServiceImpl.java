@@ -7,6 +7,7 @@ import com.macro.mall.mapper.SmsFlashPromotionProductRelationMapper;
 import com.macro.mall.model.SmsFlashPromotionProductRelation;
 import com.macro.mall.model.SmsFlashPromotionProductRelationExample;
 import com.macro.mall.service.SmsFlashPromotionProductRelationService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,23 +23,30 @@ public class SmsFlashPromotionProductRelationServiceImpl implements SmsFlashProm
     private SmsFlashPromotionProductRelationMapper relationMapper;
     @Autowired
     private SmsFlashPromotionProductRelationDao relationDao;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
     @Override
     public int create(List<SmsFlashPromotionProductRelation> relationList) {
         for (SmsFlashPromotionProductRelation relation : relationList) {
             relationMapper.insert(relation);
         }
+        portalHotCacheInvalidator.invalidateHomeCatalog();
         return relationList.size();
     }
 
     @Override
     public int update(Long id, SmsFlashPromotionProductRelation relation) {
         relation.setId(id);
-        return relationMapper.updateByPrimaryKey(relation);
+        int count = relationMapper.updateByPrimaryKey(relation);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
     public int delete(Long id) {
-        return relationMapper.deleteByPrimaryKey(id);
+        int count = relationMapper.deleteByPrimaryKey(id);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

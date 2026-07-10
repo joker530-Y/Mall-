@@ -10,6 +10,7 @@ import com.macro.mall.mapper.PmsProductCategoryMapper;
 import com.macro.mall.mapper.PmsProductMapper;
 import com.macro.mall.model.*;
 import com.macro.mall.service.PmsProductCategoryService;
+import com.macro.mall.service.PortalHotCacheInvalidator;
 import cn.hutool.core.collection.CollUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,8 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
     private PmsProductCategoryAttributeRelationMapper productCategoryAttributeRelationMapper;
     @Autowired
     private PmsProductCategoryDao productCategoryDao;
+    @Autowired
+    private PortalHotCacheInvalidator portalHotCacheInvalidator;
     @Override
     public int create(PmsProductCategoryParam pmsProductCategoryParam) {
         PmsProductCategory productCategory = new PmsProductCategory();
@@ -47,6 +50,7 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
         if(!CollUtil.isEmpty(productAttributeIdList)){
             insertRelationList(productCategory.getId(), productAttributeIdList);
         }
+        portalHotCacheInvalidator.invalidateCategoryTree();
         return count;
     }
 
@@ -89,7 +93,9 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
             relationExample.createCriteria().andProductCategoryIdEqualTo(id);
             productCategoryAttributeRelationMapper.deleteByExample(relationExample);
         }
-        return productCategoryMapper.updateByPrimaryKeySelective(productCategory);
+        int count = productCategoryMapper.updateByPrimaryKeySelective(productCategory);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -103,7 +109,9 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
 
     @Override
     public int delete(Long id) {
-        return productCategoryMapper.deleteByPrimaryKey(id);
+        int count = productCategoryMapper.deleteByPrimaryKey(id);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override
@@ -117,7 +125,9 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
         productCategory.setNavStatus(navStatus);
         PmsProductCategoryExample example = new PmsProductCategoryExample();
         example.createCriteria().andIdIn(ids);
-        return productCategoryMapper.updateByExampleSelective(productCategory, example);
+        int count = productCategoryMapper.updateByExampleSelective(productCategory, example);
+        portalHotCacheInvalidator.invalidateCategoryTree();
+        return count;
     }
 
     @Override
@@ -126,7 +136,9 @@ public class PmsProductCategoryServiceImpl implements PmsProductCategoryService 
         productCategory.setShowStatus(showStatus);
         PmsProductCategoryExample example = new PmsProductCategoryExample();
         example.createCriteria().andIdIn(ids);
-        return productCategoryMapper.updateByExampleSelective(productCategory, example);
+        int count = productCategoryMapper.updateByExampleSelective(productCategory, example);
+        portalHotCacheInvalidator.invalidateHomeCatalog();
+        return count;
     }
 
     @Override

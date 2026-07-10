@@ -19,6 +19,7 @@ import com.macro.mall.model.SmsFlashPromotionSession;
 import com.macro.mall.model.SmsFlashPromotionSessionExample;
 import com.macro.mall.model.SmsHomeAdvertise;
 import com.macro.mall.model.SmsHomeAdvertiseExample;
+import com.macro.mall.common.constant.PortalHotCacheKeys;
 import com.macro.mall.portal.component.HotDataCache;
 import com.macro.mall.portal.dao.HomeDao;
 import com.macro.mall.portal.domain.FlashPromotionProduct;
@@ -36,11 +37,6 @@ import java.util.function.Supplier;
 
 @Service
 public class HomeServiceImpl implements HomeService {
-    private static final String HOME_CONTENT_CACHE_KEY = "home:content:";
-    private static final String HOME_RECOMMEND_CACHE_KEY = "home:recommend:";
-    private static final String HOME_HOT_CACHE_KEY = "home:hot:";
-    private static final String HOME_NEW_CACHE_KEY = "home:new:";
-
     @Autowired
     private SmsHomeAdvertiseMapper advertiseMapper;
     @Autowired
@@ -61,7 +57,7 @@ public class HomeServiceImpl implements HomeService {
     @Override
     public HomeContentResult content() {
         long minuteBucket = System.currentTimeMillis() / 60_000;
-        return hotDataCache.get(HOME_CONTENT_CACHE_KEY + minuteBucket, HomeContentResult.class, this::loadContent);
+        return hotDataCache.get(PortalHotCacheKeys.HOME_CONTENT_PREFIX + minuteBucket, HomeContentResult.class, this::loadContent);
     }
 
     private HomeContentResult loadContent() {
@@ -77,7 +73,7 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum) {
-        String cacheKey = HOME_RECOMMEND_CACHE_KEY + pageNum + ":" + pageSize;
+        String cacheKey = PortalHotCacheKeys.HOME_RECOMMEND_PREFIX + pageNum + ":" + pageSize;
         return cacheProductList(cacheKey, () -> loadRecommendProductList(pageSize, pageNum));
     }
 
@@ -114,7 +110,7 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public List<PmsProduct> hotProductList(Integer pageNum, Integer pageSize) {
-        String cacheKey = HOME_HOT_CACHE_KEY + pageNum + ":" + pageSize;
+        String cacheKey = PortalHotCacheKeys.HOME_HOT_PREFIX + pageNum + ":" + pageSize;
         return cacheProductList(cacheKey, () -> loadHotProductList(pageNum, pageSize));
     }
 
@@ -125,7 +121,7 @@ public class HomeServiceImpl implements HomeService {
 
     @Override
     public List<PmsProduct> newProductList(Integer pageNum, Integer pageSize) {
-        String cacheKey = HOME_NEW_CACHE_KEY + pageNum + ":" + pageSize;
+        String cacheKey = PortalHotCacheKeys.HOME_NEW_PREFIX + pageNum + ":" + pageSize;
         return cacheProductList(cacheKey, () -> loadNewProductList(pageNum, pageSize));
     }
 
