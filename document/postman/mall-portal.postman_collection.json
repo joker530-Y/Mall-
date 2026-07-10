@@ -30,7 +30,7 @@
 						},
 						{
 							"key": "password",
-							"value": "123",
+							"value": "123456",
 							"description": "",
 							"type": "text"
 						}

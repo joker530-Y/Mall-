@@ -9,6 +9,54 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      MALL_ADMIN_JWT_SECRET: ci-test-secret-admin
+      MALL_PORTAL_JWT_SECRET: ci-test-secret-portal
+      SPRING_RABBITMQ_VIRTUAL_HOST: /
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: mall
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      rabbitmq:
+        image: rabbitmq:3
+        env:
+          RABBITMQ_DEFAULT_USER: mall
+          RABBITMQ_DEFAULT_PASS: mall
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,6 +66,15 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+
+      - name: Initialize database
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/mall.sql
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/seckill_baseline_schema.sql
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/phase2_performance_indexes.sql || true
+          mysql -h127.0.0.1 -uroot -proot mall < document/sql/migrations/add_order_sn_unique_index.sql || true
 
       - name: Run Maven tests
         run: mvn clean test -DskipTests=false

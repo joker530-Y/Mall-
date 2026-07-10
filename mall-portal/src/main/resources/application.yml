@@ -14,7 +14,7 @@ mybatis:
 
 jwt:
   tokenHeader: Authorization
-  secret: ${MALL_PORTAL_JWT_SECRET}
+  secret: ${MALL_PORTAL_JWT_SECRET:mall-portal-dev-secret}
   expiration: 604800
   tokenHead: 'Bearer '
 

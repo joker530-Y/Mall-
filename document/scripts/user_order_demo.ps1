@@ -1,7 +1,7 @@
 param(
     [string]$PortalBaseUrl = "http://localhost:8085",
     [string]$Username = "test",
-    [string]$Password = "123",
+    [string]$Password = "123456",
     [long]$ProductSkuId = 106,
     [long]$ProductId = 29,
     [long]$MemberReceiveAddressId = 4

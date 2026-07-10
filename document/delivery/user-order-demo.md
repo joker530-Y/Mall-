@@ -6,7 +6,7 @@
 
 - `mall-portal` 已启动（默认 `http://localhost:8085`）
 - MySQL / Redis / RabbitMQ 已按 `document/delivery/local-runbook.md` 启动
-- 演示账号：`test` / `123`（BCrypt 加密密码，客户端按原项目约定提交）
+- 演示账号：`test` / `123456`（BCrypt 加密密码，客户端按原项目约定提交）
 
 ## 方式一：Postman 一键演示
 
