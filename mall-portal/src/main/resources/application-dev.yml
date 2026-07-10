@@ -32,6 +32,11 @@ spring:
     virtual-host: /mall
     username: mall
     password: mall
+    # 秒杀消息需 publisher confirm；未路由时返回以便上层回补 Redis
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
 jwt:
   secret: ${MALL_PORTAL_JWT_SECRET:mall-portal-secret}
@@ -51,6 +56,7 @@ mall:
     password-reset-enabled: true
   seckill:
     baseline-enabled: true
+    mq-confirm-timeout-ms: 3000
 
 alipay:
   gatewayUrl: https://openapi-sandbox.dl.alipaydev.com/gateway.do

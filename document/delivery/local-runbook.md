@@ -4,10 +4,11 @@
 
 - JDK 21
 - Maven
-- MySQL with database `mall`
-- Redis
-- RabbitMQ virtual host `/mall`, username `mall`, password `mall`
-- Optional: MongoDB for read-history features
+- MySQL 8.0 with database `mall`
+- Redis 7
+- RabbitMQ 3.13+ virtual host `/mall`, username `mall`, password `mall`
+- Optional: Elasticsearch 8.x for `mall-search` (Spring Boot 3.5 Java API Client)
+- Optional: MongoDB 6 for read-history features
 - Optional: JMeter for pressure tests
 
 ## Initialize Database
@@ -18,6 +19,7 @@ Get-Content .\document\sql\mall.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\seckill_baseline_schema.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\phase2_performance_indexes.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_order_sn_unique_index.sql | mysql -uroot -proot -D mall
+Get-Content .\document\sql\migrations\add_order_request_idempotency.sql | mysql -uroot -proot -D mall
 Get-Content .\document\sql\migrations\add_seckill_manage_resource.sql | mysql -uroot -proot -D mall
 ```
 
@@ -25,12 +27,13 @@ If MySQL reports that an index already exists, skip that `ALTER TABLE`.
 
 ## Start Services
 
-Start local middleware first:
+Start local middleware first (or `document/docker/docker-compose-env.yml`):
 
 ```text
-MySQL:    localhost:3306 / root / root
-Redis:    localhost:6379
-RabbitMQ: localhost:5672 / vhost /mall / mall / mall
+MySQL:         localhost:3306 / root / root
+Redis:         localhost:6379
+RabbitMQ:      localhost:5672 / vhost /mall / mall / mall
+Elasticsearch: localhost:9200 (8.x, security disabled in compose)
 ```
 
 Compile:
@@ -44,6 +47,9 @@ Run backends:
 ```powershell
 mvn -pl mall-admin spring-boot:run    # http://localhost:8080
 mvn -pl mall-portal spring-boot:run   # http://localhost:8085
+# optional search (set MALL_SEARCH_MANAGE_TOKEN first)
+$env:MALL_SEARCH_MANAGE_TOKEN="change-me-search-manage-token"
+mvn -pl mall-search spring-boot:run   # http://localhost:8081
 ```
 
 Run frontends:
@@ -64,9 +70,27 @@ Open Swagger UI:
 http://localhost:8085/swagger-ui.html
 ```
 
+## Search write APIs
+
+`mall-search` 公开检索接口无需登录。导入/创建/删除索引需请求头：
+
+```http
+X-Manage-Token: <MALL_SEARCH_MANAGE_TOKEN>
+```
+
+示例：
+
+```powershell
+curl -X POST "http://localhost:8081/esProduct/importAll" -H "X-Manage-Token: change-me-search-manage-token"
+```
+
+未配置 `MALL_SEARCH_MANAGE_TOKEN` 时写接口一律拒绝。
+
 ## Docker (optional)
 
 Use `document/docker/docker-compose-env.yml` for middleware and `document/docker/docker-compose-app.yml` for app images. Copy the root `.env.example` to `document/docker/.env` and fill in secrets before `docker compose up`.
+
+Compose 已与本地/CI 对齐：MySQL 8.0、RabbitMQ `/mall`+`mall`/`mall`、Elasticsearch 8.15、Mongo 6。
 
 ## Seckill Reset And Warmup
 

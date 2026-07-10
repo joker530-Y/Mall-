@@ -12,7 +12,7 @@ jobs:
     env:
       MALL_ADMIN_JWT_SECRET: ci-test-secret-admin
       MALL_PORTAL_JWT_SECRET: ci-test-secret-portal
-      SPRING_RABBITMQ_VIRTUAL_HOST: /
+      MALL_SEARCH_MANAGE_TOKEN: ci-search-manage-token
     services:
       mysql:
         image: mysql:8.0
@@ -36,10 +36,11 @@ jobs:
           --health-timeout=5s
           --health-retries=10
       rabbitmq:
-        image: rabbitmq:3
+        image: rabbitmq:3.13-management
         env:
           RABBITMQ_DEFAULT_USER: mall
           RABBITMQ_DEFAULT_PASS: mall
+          RABBITMQ_DEFAULT_VHOST: /mall
         ports:
           - 5672:5672
         options: >-
@@ -56,6 +57,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
+
 
     steps:
       - uses: actions/checkout@v4

@@ -17,6 +17,7 @@
 - `initialStock - redisStock = successOrderCount` checks Redis admission consistency.
 - `dbStockDecrement = successOrderCount` checks DB persistence consistency.
 - RabbitMQ consumer logic must remain idempotent because delivery can be retried.
+- Seckill publisher uses correlated confirms + mandatory returns; send failure triggers Redis compensation in `SeckillRedisServiceImpl`.
 
 ## Tradeoffs
 
@@ -29,8 +30,8 @@
 ## Follow-up Hardening
 
 - Add explicit cache eviction from admin product/recommendation/flash-promotion update APIs.
-- Add RabbitMQ publisher confirm compensation for seckill messages that fail after Redis stock deduction.
 - Add a dead-letter retry and replay runbook for failed seckill order messages.
+- Optionally reuse admin JWT for `mall-search` write APIs (currently `X-Manage-Token` / `MALL_SEARCH_MANAGE_TOKEN`).
 - Add dashboard screenshots after running the benchmark on a fixed local machine.
 - Add CI smoke checks for compile and delivery-file presence.
 

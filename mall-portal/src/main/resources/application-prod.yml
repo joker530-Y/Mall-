@@ -32,6 +32,10 @@ spring:
     virtual-host: ${RABBITMQ_VHOST:/mall}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
 jwt:
   secret: ${MALL_PORTAL_JWT_SECRET}
@@ -54,6 +58,8 @@ mall:
   payment:
     mock-only: true
     mock-pay-enabled: false
+  seckill:
+    mq-confirm-timeout-ms: ${MALL_SECKILL_MQ_CONFIRM_TIMEOUT_MS:3000}
 
 alipay:
   gatewayUrl: ${ALIPAY_GATEWAY_URL:https://openapi-sandbox.dl.alipaydev.com/gateway.do}

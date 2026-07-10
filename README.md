@@ -174,9 +174,9 @@ powershell -ExecutionPolicy Bypass -File document/scripts/run_seckill_phase1c.ps
 
 ## 已知局限
 
-- **MQ 补偿**：Redis 扣减成功但 MQ 发送失败时的 publisher confirm 补偿尚未实现（见 `document/delivery/review-notes.md`）。
 - **缓存失效**：商品编辑后需主动失效热点缓存，当前为 TTL 兜底。
 - **支付**：仅模拟支付，支付宝沙箱入口在 `mall.payment.mock-only=true` 时禁用。
+- **搜索写接口**：`mall-search` 的导入/增删需请求头 `X-Manage-Token`（环境变量 `MALL_SEARCH_MANAGE_TOKEN`），未接入后台 JWT。
 
 常见本地问题排查见 `document/delivery/local-runbook.md`（门户登录 403、商品详情无法加购等）。
 
