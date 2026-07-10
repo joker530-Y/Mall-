@@ -5,11 +5,11 @@
 > **项目边界**：仅用于学习与简历展示，不接入真实支付、不提供生产部署 SLA，也不声称可直接商用。
 
 <p align="center">
-  <img src="document/assets/architecture.svg" alt="系统架构图" width="720" />
+  <img src="document/assets/architecture.png" alt="系统架构图" width="720" />
 </p>
 
 <p align="center">
-  <img src="document/assets/admin-console.svg" alt="秒杀运营控制台" width="720" />
+  <img src="document/assets/admin-console.png" alt="秒杀运营控制台" width="720" />
 </p>
 
 ## 核心亮点
@@ -63,8 +63,8 @@ mall-search     Elasticsearch 商品搜索（可选）
 
 架构图与后台控制台见 README 顶部，源文件位于 `document/assets/`：
 
-- `architecture.svg` — 系统架构图
-- `admin-console.svg` — 秒杀运营控制台示意
+- `architecture.png` — 系统架构图
+- `admin-console.png` — 秒杀运营控制台
 
 ## 本地启动
 
