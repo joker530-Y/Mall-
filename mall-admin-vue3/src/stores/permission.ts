@@ -39,7 +39,14 @@ export const usePermissionStore = defineStore('permission', {
     sidebarMenus(state): SidebarItem[] {
       const backend = buildSidebarFromMenus(state.menus)
       const bootstrap = BOOTSTRAP_ROUTES
-        .filter((route) => !route.meta?.hidden && typeof route.path === 'string' && !route.path.includes(':'))
+        .filter(
+          (route) =>
+            !route.redirect &&
+            !route.meta?.hidden &&
+            Boolean(route.meta?.title) &&
+            typeof route.path === 'string' &&
+            !route.path.includes(':')
+        )
         .map((route) => ({
           path: route.path,
           title: String(route.meta?.title || route.name),

@@ -26,8 +26,18 @@ export async function ensureDynamicRoutes(router: Router) {
   return true
 }
 
-function shouldRetryNavigation(to: { fullPath: string; matched: { path: string }[] }, router: Router) {
-  return to.matched.length === 0 && router.resolve(to.fullPath).matched.length > 0
+function isCatchAllMatch(to: { name?: string | symbol | null; matched: { name?: string | symbol | null }[] }) {
+  return to.name === 'not-found' || to.matched.some((route) => route.name === 'not-found')
+}
+
+function shouldRetryNavigation(
+  to: { fullPath: string; name?: string | symbol | null; matched: { name?: string | symbol | null }[] },
+  router: Router
+) {
+  // 动态路由刚注册时，通配 404 可能已经抢先匹配；需强制重解析一次。
+  if (!isCatchAllMatch(to) && to.matched.length > 0) return false
+  const resolved = router.resolve(to.fullPath)
+  return resolved.matched.length > 0 && resolved.name !== 'not-found'
 }
 
 export function setupRouterGuards(router: Router) {
@@ -64,7 +74,11 @@ export function setupRouterGuards(router: Router) {
       return { name: 'forbidden' }
     }
 
-    if (to.matched.length === 0 && !WHITE_LIST.has(String(to.name))) {
+    if ((to.matched.length === 0 || isCatchAllMatch(to)) && !WHITE_LIST.has(String(to.name))) {
+      const resolved = router.resolve(to.fullPath)
+      if (resolved.matched.length > 0 && resolved.name !== 'not-found') {
+        return to.fullPath
+      }
       return { name: 'not-found' }
     }
 

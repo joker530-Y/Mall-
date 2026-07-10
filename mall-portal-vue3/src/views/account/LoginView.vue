@@ -18,8 +18,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { resolveInternalRedirect } from '@/utils/navigation'
+import { PortalApiError } from '@/api/http/errors'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,13 +30,20 @@ const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
 async function submit() {
+  if (!form.username.trim() || !form.password) {
+    ElMessage.warning('请输入账号和密码')
+    return
+  }
   loading.value = true
   try {
-    await auth.signIn(form.username, form.password)
+    await auth.signIn(form.username.trim(), form.password)
     const redirect = resolveInternalRedirect(
       typeof route.query.redirect === 'string' ? route.query.redirect : undefined
     )
-    router.push(redirect)
+    await router.replace(redirect)
+  } catch (err) {
+    const message = err instanceof PortalApiError ? err.message : '登录失败，请稍后重试'
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }

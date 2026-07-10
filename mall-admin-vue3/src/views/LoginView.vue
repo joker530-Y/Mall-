@@ -54,7 +54,7 @@ async function submit() {
       typeof route.query.redirect === 'string' ? route.query.redirect : undefined,
       '/dashboard'
     )
-    router.push(redirect)
+    await router.replace(redirect)
   } finally {
     loading.value = false
   }

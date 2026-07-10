@@ -120,7 +120,8 @@ function resolveIcon(name?: string) {
 
 async function signOut() {
   await auth.signOut()
-  router.push({ name: 'login' })
+  // 动态路由需整页刷新才能干净卸载，避免二次登录路由冲突
+  window.location.assign('/login')
 }
 </script>
 
