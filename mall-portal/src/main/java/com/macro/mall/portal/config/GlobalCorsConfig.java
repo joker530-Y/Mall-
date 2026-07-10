@@ -12,7 +12,7 @@ import java.util.Arrays;
 @Configuration
 public class GlobalCorsConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:8060,http://127.0.0.1:8060,http://localhost:5173,http://127.0.0.1:5173}")
+    @Value("${cors.allowed-origins:http://localhost:8060,http://127.0.0.1:8060,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}")
     private String allowedOrigins;
 
     @Bean

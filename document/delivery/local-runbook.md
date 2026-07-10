@@ -109,3 +109,20 @@ powershell -ExecutionPolicy Bypass -File document/scripts/seckill_redis_verify.p
 ```
 
 Expected output should contain only `[PASS]` lines.
+
+## Troubleshooting
+
+### Portal login shows `Request failed with status code 403`
+
+Usually Spring CORS rejecting `Origin: http://localhost:5174`. Confirm:
+
+1. `mall-portal` `cors.allowed-origins` includes `http://localhost:5174` and `http://127.0.0.1:5174`
+2. Vite proxy for `/api/portal` strips the forwarded `Origin` header
+3. Restart `mall-portal` and `mall-portal-vue3` after changing CORS/proxy config
+4. Hard-refresh the browser (Ctrl+F5)
+
+PowerShell calls without an `Origin` header may still return 200 while the browser fails—always verify with the browser Network tab.
+
+### Product detail: add-to-cart / buy buttons stay disabled
+
+SKU specs are stored in `pms_sku_stock.sp_data` JSON. The portal UI must parse `spData` to build color/capacity options and select a stocked SKU. If buttons stay disabled, check that the product has SKUs with stock and that the frontend build includes the `spData` matching logic (`mall-portal-vue3/src/utils/sku.ts`).

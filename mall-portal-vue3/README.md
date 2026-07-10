@@ -20,9 +20,17 @@ npm run dev
 
 Dev server: `http://localhost:5174`
 
-Vite proxies `/api/portal/**` to `http://localhost:8085/**`.
+Vite proxies `/api/portal/**` to `http://localhost:8085/**`, and strips the forwarded `Origin` header so Spring CORS does not reject same-origin proxy traffic.
 
 Start `mall-portal` first for live data. Demo member account is documented in the root `README.md`.
+
+Portal CORS must allow `http://localhost:5174` / `http://127.0.0.1:5174` (see `mall-portal` `cors.allowed-origins`).
+
+## SKU Selection
+
+Product SKUs use `spData` JSON (`[{"key":"颜色","value":"银色"}, ...]`), not legacy `sp1/sp2/sp3`.
+
+The detail page builds option groups from `spData`, matches the selected combination to a SKU, and enables **加入购物车** / **立即购买** only when that SKU has stock. Helpers live in `src/utils/sku.ts`.
 
 ## Scripts
 

@@ -24,6 +24,10 @@ export interface SkuStock {
   skuCode?: string
   price?: number
   stock?: number
+  pic?: string
+  /** JSON: [{"key":"颜色","value":"黑色"}, ...] */
+  spData?: string
+  /** 旧字段，部分历史数据可能仍有 */
   sp1?: string
   sp2?: string
   sp3?: string
@@ -32,6 +36,8 @@ export interface SkuStock {
 export interface ProductAttribute {
   id: number
   name: string
+  /** 0=规格，1=参数 */
+  type?: number
 }
 
 export interface ProductAttributeValue {

@@ -30,6 +30,7 @@ const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
 async function submit() {
+  if (loading.value) return
   if (!form.username.trim() || !form.password) {
     ElMessage.warning('请输入账号和密码')
     return

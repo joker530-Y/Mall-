@@ -15,7 +15,7 @@
             <el-option
               v-for="sku in detail.skuStockList"
               :key="sku.id"
-              :label="[sku.sp1, sku.sp2, sku.sp3].filter(Boolean).join(' / ') || `SKU ${sku.id}`"
+              :label="formatSkuLabel(sku)"
               :value="sku.id"
             />
           </el-select>
@@ -61,6 +61,7 @@ import { useRoute } from 'vue-router'
 import PriceTag from '@/components/PriceTag.vue'
 import { getHomeContent, type FlashPromotionProduct } from '@/api/modules/home'
 import { getProductDetail, type ProductDetail } from '@/api/modules/product'
+import { formatSkuLabel } from '@/utils/sku'
 import { listAddresses, type MemberAddress } from '@/api/modules/member'
 import { getSeckillResult, submitSeckillOrder, type SeckillOrderResult } from '@/api/modules/seckill'
 

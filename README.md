@@ -123,6 +123,8 @@ npm run dev    # http://localhost:5174
 | `mall-admin-vue3` | 5173 | `/api/admin` → `http://localhost:8080` |
 | `mall-portal-vue3` | 5174 | `/api/portal` → `http://localhost:8085` |
 
+门户后端 `cors.allowed-origins` 需包含 `http://localhost:5174`（及 `127.0.0.1:5174`）。开发代理会去掉转发的 `Origin`，避免同源代理误触发 Spring CORS 403。
+
 ## 演示账号与模拟支付
 
 | 角色 | 账号 | 密码 | 说明 |
@@ -174,6 +176,8 @@ powershell -ExecutionPolicy Bypass -File document/scripts/run_seckill_phase1c.ps
 - **MQ 补偿**：Redis 扣减成功但 MQ 发送失败时的 publisher confirm 补偿尚未实现（见 `document/delivery/review-notes.md`）。
 - **缓存失效**：商品编辑后需主动失效热点缓存，当前为 TTL 兜底。
 - **支付**：仅模拟支付，支付宝沙箱入口在 `mall.payment.mock-only=true` 时禁用。
+
+常见本地问题排查见 `document/delivery/local-runbook.md`（门户登录 403、商品详情无法加购等）。
 
 ## 重要文档
 
