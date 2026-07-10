@@ -25,5 +25,8 @@ export function login(username: string, password: string) {
 }
 
 export function getMemberInfo() {
-  return unwrap<MemberInfo>(request.get('/sso/info'))
+  const token = sessionStorage.getItem('mall-portal-vue3-token')
+  const tokenHead = (sessionStorage.getItem('mall-portal-vue3-token-head') || 'Bearer ').trim()
+  const headers = token ? { Authorization: `${tokenHead} ${token}` } : undefined
+  return unwrap<MemberInfo>(request.get('/sso/info', { headers }))
 }

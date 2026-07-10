@@ -2,7 +2,6 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { PortalApiError, toPortalApiError } from './errors'
 import { useAuthStore } from '@/stores/auth'
-import { resolveInternalRedirect } from '@/utils/navigation'
 
 export interface CommonResult<T> {
   code: number
@@ -18,14 +17,45 @@ export type PageResult<T> = {
   list: T[]
 }
 
-function handleUnauthorized(message: string) {
-  const auth = useAuthStore()
-  auth.clearSession()
+const TOKEN_KEY = 'mall-portal-vue3-token'
+const TOKEN_HEAD_KEY = 'mall-portal-vue3-token-head'
+const AUTH_WHITELIST = ['/sso/login', '/sso/register', '/sso/getAuthCode']
+
+function readAuthorization() {
+  try {
+    const auth = useAuthStore()
+    if (auth.authorization) return auth.authorization
+  } catch {
+    // Pinia 尚未就绪时回退到 sessionStorage
+  }
+  const token = sessionStorage.getItem(TOKEN_KEY)
+  if (!token) return ''
+  const tokenHead = (sessionStorage.getItem(TOKEN_HEAD_KEY) || 'Bearer ').trim()
+  return `${tokenHead} ${token}`
+}
+
+function handleUnauthorized(message: string, requestAuthorization?: string) {
+  const currentAuthorization = readAuthorization()
+  // 忽略过期请求：旧 token 的 401 不应清掉刚登录的新会话
+  if (
+    requestAuthorization &&
+    currentAuthorization &&
+    requestAuthorization !== currentAuthorization
+  ) {
+    return
+  }
+  try {
+    useAuthStore().clearSession()
+  } catch {
+    sessionStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_HEAD_KEY)
+  }
+  if (window.location.pathname.startsWith('/login')) {
+    return
+  }
   ElMessage.error(message || '登录已失效，请重新登录')
   const redirect = encodeURIComponent(window.location.pathname + window.location.search)
-  if (!window.location.pathname.startsWith('/login')) {
-    window.location.assign(`/login?redirect=${redirect}`)
-  }
+  window.location.assign(`/login?redirect=${redirect}`)
 }
 
 const request = axios.create({
@@ -37,9 +67,15 @@ const request = axios.create({
 })
 
 request.interceptors.request.use((config) => {
-  const auth = useAuthStore()
-  if (auth.authorization) {
-    config.headers.Authorization = auth.authorization
+  const url = config.url || ''
+  const skipAuth = AUTH_WHITELIST.some((path) => url.includes(path))
+  if (!skipAuth) {
+    const authorization = readAuthorization()
+    if (authorization) {
+      config.headers.Authorization = authorization
+    }
+  } else if (config.headers) {
+    delete config.headers.Authorization
   }
   if (!config.headers['X-Request-Id']) {
     config.headers['X-Request-Id'] = crypto.randomUUID()
@@ -52,8 +88,9 @@ request.interceptors.response.use(
     const result = response.data as CommonResult<unknown>
     if (result && typeof result.code === 'number' && result.code !== 200) {
       const message = result.message || '请求失败'
+      const requestAuthorization = String(response.config.headers?.Authorization || '')
       if (result.code === 401) {
-        handleUnauthorized(message)
+        handleUnauthorized(message, requestAuthorization)
         return Promise.reject(new PortalApiError('unauthorized', message, result.code))
       }
       if (result.code === 403) {
@@ -69,13 +106,12 @@ request.interceptors.response.use(
   },
   (error) => {
     const apiError = toPortalApiError(error)
+    const requestAuthorization = String(error?.config?.headers?.Authorization || '')
     if (apiError.kind === 'unauthorized') {
-      handleUnauthorized(apiError.message)
+      handleUnauthorized(apiError.message, requestAuthorization)
       return Promise.reject(apiError)
     }
-    if (apiError.kind !== 'forbidden') {
-      ElMessage.error(apiError.message)
-    }
+    ElMessage.error(apiError.message)
     return Promise.reject(apiError)
   }
 )

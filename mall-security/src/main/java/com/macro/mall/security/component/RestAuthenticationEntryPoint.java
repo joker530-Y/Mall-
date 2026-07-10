@@ -24,11 +24,12 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
      */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Cache-Control","no-cache");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
-        response.getWriter().println(JSONUtil.parse(CommonResult.unauthorized(authException.getMessage())));
+        response.getWriter().println(JSONUtil.toJsonStr(CommonResult.unauthorized(authException.getMessage())));
         response.getWriter().flush();
     }
 }

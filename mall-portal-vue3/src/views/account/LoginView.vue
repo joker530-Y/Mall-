@@ -42,8 +42,10 @@ async function submit() {
     )
     await router.replace(redirect)
   } catch (err) {
-    const message = err instanceof PortalApiError ? err.message : '登录失败，请稍后重试'
-    ElMessage.error(message)
+    // 业务/鉴权错误已由 request 拦截器提示，避免重复弹窗
+    if (!(err instanceof PortalApiError)) {
+      ElMessage.error('登录失败，请稍后重试')
+    }
   } finally {
     loading.value = false
   }

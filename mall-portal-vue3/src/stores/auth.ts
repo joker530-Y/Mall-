@@ -20,7 +20,11 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async signIn(username: string, password: string) {
+      this.clearSession()
       const result = await login(username, password)
+      if (!result?.token) {
+        throw new Error('登录响应缺少 token')
+      }
       this.token = result.token
       this.tokenHead = result.tokenHead || 'Bearer '
       sessionStorage.setItem(TOKEN_KEY, result.token)
