@@ -34,16 +34,16 @@ function Invoke-PortalApi {
     return Invoke-RestMethod @params
 }
 
-Write-Host "1) 会员登录"
+Write-Host "[1/5] Member login"
 $login = Invoke-PortalApi -Method Post -Path "/sso/login" -Query @{
     username = $Username
     password = $Password
 }
-if ($login.code -ne 200) { throw "登录失败: $($login.message)" }
-$authHeader = @{ Authorization = "$($login.data.tokenHead)$($login.data.token)" }
-Write-Host "   登录成功"
+if ($login.code -ne 200) { throw "Login failed: $($login.message)" }
+$authHeader = @{ Authorization = "$($login.data.tokenHead) $($login.data.token)" }
+Write-Host "      OK"
 
-Write-Host "2) 加入购物车"
+Write-Host "[2/5] Add cart item"
 $cartBody = @{
     price = 5499
     productId = $ProductId
@@ -52,15 +52,15 @@ $cartBody = @{
     productSkuId = $ProductSkuId
     productSubTitle = "demo"
     quantity = 1
-    productAttr = "金色;32G"
+    productAttr = "Gold;32G"
 }
 Invoke-PortalApi -Method Post -Path "/cart/add" -Body $cartBody -Headers $authHeader | Out-Null
-Write-Host "   加购成功"
+Write-Host "      OK"
 
-Write-Host "3) 获取购物车并生成订单"
+Write-Host "[3/5] Generate order"
 $cartList = Invoke-PortalApi -Method Get -Path "/cart/list/promotion" -Headers $authHeader
 $cartIds = @($cartList.data | ForEach-Object { $_.id })
-if ($cartIds.Count -eq 0) { throw "购物车为空" }
+if ($cartIds.Count -eq 0) { throw "Cart is empty" }
 
 $orderBody = @{
     cartIds = $cartIds
@@ -70,19 +70,19 @@ $orderBody = @{
     useIntegration = 0
 }
 $orderResult = Invoke-PortalApi -Method Post -Path "/order/generateOrder" -Body $orderBody -Headers $authHeader
-if ($orderResult.code -ne 200) { throw "下单失败: $($orderResult.message)" }
+if ($orderResult.code -ne 200) { throw "Order failed: $($orderResult.message)" }
 $orderId = $orderResult.data.order.id
-Write-Host "   下单成功, orderId=$orderId"
+Write-Host "      orderId=$orderId"
 
-Write-Host "4) 模拟支付"
+Write-Host "[4/5] Mock pay"
 $pay = Invoke-PortalApi -Method Post -Path "/order/mock-pay/$orderId" -Query @{ payType = 1 } -Headers $authHeader
-if ($pay.code -ne 200) { throw "支付失败: $($pay.message)" }
-Write-Host "   $($pay.message)"
+if ($pay.code -ne 200) { throw "Pay failed: $($pay.message)" }
+Write-Host "      $($pay.message)"
 
-Write-Host "5) 查询订单详情"
+Write-Host "[5/5] Order detail"
 $detail = Invoke-PortalApi -Method Get -Path "/order/detail/$orderId" -Headers $authHeader
-if ($detail.code -ne 200) { throw "查询订单失败: $($detail.message)" }
-Write-Host "   订单号=$($detail.data.orderSn), 状态=$($detail.data.status), 应付金额=$($detail.data.payAmount)"
+if ($detail.code -ne 200) { throw "Detail failed: $($detail.message)" }
+Write-Host "      orderSn=$($detail.data.orderSn) status=$($detail.data.status) payAmount=$($detail.data.payAmount)"
 
 Write-Host ""
-Write-Host "用户端模拟下单链路演示完成。"
+Write-Host "User order demo completed."
